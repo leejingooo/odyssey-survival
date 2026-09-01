@@ -6,9 +6,11 @@ const SAVE_VERSION = 1;
 export interface SaveData {
   version: number;
   gold: number;
-  /** mirror upgrade id -> purchased rank */
-  mirror: Record<string, number>;
+  /** star chart upgrade id -> purchased rank */
+  starChart: Record<string, number>;
   unlockedHeroes: string[];
+  /** gods bought in the Pantheon; the free ones are not listed here */
+  unlockedGods: string[];
   lastHero: string;
   locale: LocaleId;
   sfx: boolean;
@@ -35,8 +37,9 @@ function freshSave(): SaveData {
   return {
     version: SAVE_VERSION,
     gold: 0,
-    mirror: {},
+    starChart: {},
     unlockedHeroes: ['odysseus'],
+    unlockedGods: [],
     lastHero: 'odysseus',
     locale: detectLocale(),
     sfx: true,
@@ -57,7 +60,7 @@ function migrate(raw: unknown): SaveData {
     ...base,
     ...data,
     version: SAVE_VERSION,
-    mirror: { ...base.mirror, ...(data.mirror ?? {}) },
+    starChart: { ...base.starChart, ...(data.starChart ?? {}) },
     unlockedHeroes:
       Array.isArray(data.unlockedHeroes) && data.unlockedHeroes.length > 0
         ? data.unlockedHeroes

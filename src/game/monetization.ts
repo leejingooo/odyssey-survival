@@ -32,6 +32,15 @@ export interface BillingProvider {
   restore(): Promise<ProductId[]>;
 }
 
+/**
+ * Master switch for the whole business model. Ads and in-app purchases are
+ * built and tested, but they are not part of the MVP the game ships first —
+ * flip this to true (and swap the stub providers in `src/app.ts`) when the
+ * store build is ready. Everything behind it stays compiled and type-checked
+ * so it cannot rot in the meantime.
+ */
+export const MONETIZATION_ENABLED = false;
+
 export const DAILY_AD_CAP = 5;
 export const AD_GOLD_REWARD = 120;
 

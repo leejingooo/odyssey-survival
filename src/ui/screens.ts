@@ -1,6 +1,7 @@
 import type { SaveData } from '../core/storage';
 import type { CardDef } from '../data/cards';
-import { godName, GODS } from '../data/gods';
+import { availableGods, GOD_IDS, GOD_INFUSION, godName, godTitle, GODS } from '../data/gods';
+import { BOONS_BY_GOD } from '../data/boons';
 import {
   HEROES,
   HERO_IDS,
@@ -10,8 +11,8 @@ import {
   heroWeaponName,
   type HeroId,
 } from '../data/heroes';
-import { MIRROR, mirrorDesc, mirrorName, mirrorRank, nextCost } from '../data/mirror';
-import type { Monetization, Product } from '../game/monetization';
+import { STAR_CHART, chartDesc, chartName, chartRank, nextCost } from '../data/starchart';
+import { MONETIZATION_ENABLED, type Monetization, type Product } from '../game/monetization';
 import type { PendingChoice, Run } from '../game/run';
 import {
   formatTime,
@@ -24,7 +25,7 @@ import {
   type LocaleId,
 } from '../i18n';
 import { button, clear, el } from './dom';
-import { cardIcon, heroPortrait } from './glyph';
+import { cardIcon, godPip, heroPortrait } from './glyph';
 
 export interface UiContext {
   save: SaveData;
@@ -40,7 +41,7 @@ export interface UiContext {
   resetProgress(): void;
 }
 
-export type ScreenName = 'title' | 'heroes' | 'mirror' | 'shop' | 'settings';
+export type ScreenName = 'title' | 'heroes' | 'chart' | 'pantheon' | 'shop' | 'settings';
 
 function goldChip(save: SaveData): HTMLElement {
   return el('div', { class: 'gold-chip' }, [
@@ -86,10 +87,15 @@ export function titleScreen(ctx: UiContext): HTMLElement {
       el('div', { class: 'stack', style: { width: '100%', maxWidth: '340px' } }, [
         button(t('ui.play'), () => ctx.go('heroes'), 'btn btn--primary btn--wide'),
         el('div', { class: 'btn-row' }, [
-          button(t('menu.mirror'), () => ctx.go('mirror')),
-          button(t('menu.shop'), () => ctx.go('shop')),
+          button(t('menu.chart'), () => ctx.go('chart')),
+          button(t('menu.pantheon'), () => ctx.go('pantheon')),
         ]),
-        button(t('ui.settings'), () => ctx.go('settings'), 'btn btn--ghost btn--wide'),
+        el('div', { class: 'btn-row' }, [
+          button(t('ui.settings'), () => ctx.go('settings'), 'btn btn--ghost'),
+          MONETIZATION_ENABLED
+            ? button(t('menu.shop'), () => ctx.go('shop'), 'btn btn--ghost')
+            : null,
+        ]),
       ]),
       stats,
     ]),
@@ -180,23 +186,23 @@ export function heroScreen(ctx: UiContext): HTMLElement {
   ]);
 }
 
-// ------------------------------------------------------------------ mirror
+// ------------------------------------------------------------- star chart
 
-export function mirrorScreen(ctx: UiContext): HTMLElement {
+export function chartScreen(ctx: UiContext): HTMLElement {
   const { save } = ctx;
-  const list = el('div', { class: 'mirror-list' });
+  const list = el('div', { class: 'row-list' });
 
   const paint = () => {
     clear(list);
-    for (const def of MIRROR) {
-      const rank = mirrorRank(save, def.id);
+    for (const def of STAR_CHART) {
+      const rank = chartRank(save, def.id);
       const cost = nextCost(def, rank);
       const pips = el('div', { class: 'pips' });
       for (let i = 0; i < def.maxRank; i++) {
         pips.append(el('div', { class: `pip${i < rank ? ' is-on' : ''}` }));
       }
       const buy = button(
-        cost === null ? t('ui.maxed') : t('mirror.cost', cost),
+        cost === null ? t('ui.maxed') : t('chart.cost', cost),
         () => {
           if (cost === null) return;
           if (save.gold < cost) {
@@ -204,7 +210,7 @@ export function mirrorScreen(ctx: UiContext): HTMLElement {
             return;
           }
           save.gold -= cost;
-          save.mirror[def.id] = rank + 1;
+          save.starChart[def.id] = rank + 1;
           ctx.commit();
           ctx.rerender();
         },
@@ -213,12 +219,12 @@ export function mirrorScreen(ctx: UiContext): HTMLElement {
       buy.disabled = cost === null;
 
       list.append(
-        el('div', { class: 'mirror-row' }, [
-          el('div', { class: 'mirror-row__head' }, [
-            el('div', { class: 'mirror-row__name', text: mirrorName(def.id) }),
+        el('div', { class: 'row' }, [
+          el('div', { class: 'row__head' }, [
+            el('div', { class: 'row__name', text: chartName(def.id) }),
             pips,
           ]),
-          el('div', { class: 'mirror-row__desc', text: mirrorDesc(def, rank) }),
+          el('div', { class: 'row__desc', text: chartDesc(def, rank) }),
           buy,
         ]),
       );
@@ -227,11 +233,95 @@ export function mirrorScreen(ctx: UiContext): HTMLElement {
   paint();
 
   return el('div', { class: 'screen screen--menu fade-in' }, [
-    topbar(ctx, t('mirror.title'), () => ctx.go('title')),
+    topbar(ctx, t('chart.title'), () => ctx.go('title')),
     el('p', {
       class: 'hint',
       style: { textAlign: 'left', marginTop: '0' },
-      text: t('mirror.subtitle'),
+      text: t('chart.subtitle'),
+    }),
+    el('div', { class: 'screen__scroll' }, [list]),
+  ]);
+}
+
+// --------------------------------------------------------------- pantheon
+
+/**
+ * The god codex and the shop for gods in one screen: every boon and every
+ * infusion is readable before you spend a coin, because a blind unlock in a
+ * game with an 11-god pantheon is just a lottery ticket.
+ */
+export function pantheonScreen(ctx: UiContext): HTMLElement {
+  const { save } = ctx;
+  const list = el('div', { class: 'row-list' });
+
+  const paint = () => {
+    clear(list);
+    const owned = availableGods(save);
+    for (const id of GOD_IDS) {
+      const def = GODS[id];
+      const unlocked = owned.has(id);
+      const sigil = godPip(id, 44);
+      sigil.className = 'god-row__sigil';
+
+      const action =
+        def.unlockCost === 0
+          ? el('div', { class: 'god-row__state', text: t('pantheon.free') })
+          : unlocked
+            ? el('div', { class: 'god-row__state', text: t('pantheon.served') })
+            : button(
+                t('pantheon.unlockFor', def.unlockCost),
+                () => {
+                  if (save.gold < def.unlockCost) {
+                    ctx.toast(t('ui.notEnoughGold'));
+                    return;
+                  }
+                  save.gold -= def.unlockCost;
+                  save.unlockedGods.push(id);
+                  ctx.commit();
+                  ctx.toast(t('pantheon.unlocked', godName(id)));
+                  ctx.rerender();
+                },
+                'btn btn--ghost',
+              );
+
+      const boons = el('div', { class: 'god-row__boons' });
+      for (const boon of BOONS_BY_GOD[id] ?? []) {
+        boons.append(
+          el('div', { class: 'god-boon' }, [
+            el('span', { class: 'god-boon__name', text: loc(boon.name) }),
+            document.createTextNode(' '),
+            el('span', { class: 'god-boon__desc', text: loc(boon.desc, ...boon.values(1)) }),
+          ]),
+        );
+      }
+
+      list.append(
+        el('div', { class: `row god-row${unlocked ? '' : ' is-locked'}` }, [
+          el('div', { class: 'god-row__head' }, [
+            sigil,
+            el('div', { class: 'god-row__id' }, [
+              el('div', { class: 'row__name', text: godName(id), style: { color: def.color } }),
+              el('div', { class: 'god-row__title', text: godTitle(id) }),
+            ]),
+            action,
+          ]),
+          boons,
+          el('div', { class: 'god-row__infusion' }, [
+            el('span', { class: 'card__tag', text: t('pantheon.infusion') }),
+            document.createTextNode(' ' + loc(GOD_INFUSION[id])),
+          ]),
+        ]),
+      );
+    }
+  };
+  paint();
+
+  return el('div', { class: 'screen screen--menu fade-in' }, [
+    topbar(ctx, t('pantheon.title'), () => ctx.go('title')),
+    el('p', {
+      class: 'hint',
+      style: { textAlign: 'left', marginTop: '0' },
+      text: t('pantheon.subtitle'),
     }),
     el('div', { class: 'screen__scroll' }, [list]),
   ]);
@@ -241,7 +331,7 @@ export function mirrorScreen(ctx: UiContext): HTMLElement {
 
 export function shopScreen(ctx: UiContext): HTMLElement {
   const { save, money } = ctx;
-  const list = el('div', { class: 'mirror-list' });
+  const list = el('div', { class: 'row-list' });
 
   const paint = () => {
     clear(list);
@@ -261,15 +351,15 @@ export function shopScreen(ctx: UiContext): HTMLElement {
     );
     adBtn.disabled = left <= 0;
     list.append(
-      el('div', { class: 'mirror-row' }, [
-        el('div', { class: 'mirror-row__head' }, [
-          el('div', { class: 'mirror-row__name' }, [
+      el('div', { class: 'row' }, [
+        el('div', { class: 'row__head' }, [
+          el('div', { class: 'row__name' }, [
             el('span', { class: 'badge-ad', text: 'AD' }),
             document.createTextNode(t('shop.adGold.name')),
           ]),
         ]),
         el('div', {
-          class: 'mirror-row__desc',
+          class: 'row__desc',
           text: t('shop.adGold.desc', money.rewardAmount(), left, 5),
         }),
         adBtn,
@@ -341,11 +431,9 @@ function productRow(ctx: UiContext, product: Product): HTMLElement {
   );
   buy.disabled = owned || !money.billing.isAvailable();
 
-  return el('div', { class: 'mirror-row' }, [
-    el('div', { class: 'mirror-row__head' }, [
-      el('div', { class: 'mirror-row__name', text: name }),
-    ]),
-    desc ? el('div', { class: 'mirror-row__desc', text: desc }) : null,
+  return el('div', { class: 'row' }, [
+    el('div', { class: 'row__head' }, [el('div', { class: 'row__name', text: name })]),
+    desc ? el('div', { class: 'row__desc', text: desc }) : null,
     buy,
   ]);
 }

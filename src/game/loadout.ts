@@ -5,7 +5,7 @@ import { BOONS } from '../data/boons';
 import { rarityWeight, type CardDef } from '../data/cards';
 import type { GodId } from '../data/gods';
 import type { HeroDef } from '../data/heroes';
-import { applyMirror } from '../data/mirror';
+import { applyStarChart } from '../data/starchart';
 import { PERKS } from '../data/perks';
 import { WEAPON_UPGRADES } from '../data/upgrades';
 import { baseMechanics, baseStats, type Loadout } from './stats';
@@ -56,7 +56,7 @@ export function ownedGods(owned: ReadonlyMap<string, number>): Set<GodId> {
 }
 
 /**
- * Rebuild the entire loadout from scratch: hero base -> mirror -> every owned
+ * Rebuild the entire loadout from scratch: hero base -> star chart -> every owned
  * card at its current level. Cards are therefore idempotent and re-orderable,
  * which is what makes `apply` safe to write as "the full effect at level N".
  */
@@ -69,7 +69,7 @@ export function buildLoadout(
     stats: { ...baseStats(), ...hero.stats },
     mech: { ...baseMechanics(), ...hero.mech },
   };
-  applyMirror(out, save);
+  applyStarChart(out, save);
   for (const [id, level] of owned) {
     if (level <= 0) continue;
     ALL_CARDS.get(id)?.apply(out, level);
@@ -82,8 +82,10 @@ export interface DrawOptions {
   pool: readonly CardDef[];
   owned: ReadonlyMap<string, number>;
   luck: number;
-  /** how many different gods this voyage may serve (Mirror of Night) */
+  /** how many different gods this voyage may serve (Star Chart) */
   maxGods: number;
+  /** gods bought in the Pantheon; boons from anyone else never appear */
+  availableGods: ReadonlySet<GodId>;
   count?: number;
 }
 
@@ -93,7 +95,7 @@ export interface DrawOptions {
  * builds converge instead of sprawling.
  */
 export function drawOffers(opts: DrawOptions): CardDef[] {
-  const { rng, pool, owned, luck, maxGods } = opts;
+  const { rng, pool, owned, luck, maxGods, availableGods } = opts;
   const count = opts.count ?? 3;
   const gods = ownedGods(owned);
   const hasAnyBoon = gods.size > 0;
@@ -101,7 +103,10 @@ export function drawOffers(opts: DrawOptions): CardDef[] {
   const candidates = pool.filter((card) => {
     const level = owned.get(card.id) ?? 0;
     if (level >= card.maxLevel) return false;
-    if (card.god && !gods.has(card.god) && gods.size >= maxGods) return false;
+    if (card.god) {
+      if (!availableGods.has(card.god)) return false;
+      if (!gods.has(card.god) && gods.size >= maxGods) return false;
+    }
     // Divine Infusion needs a god to infuse.
     if (card.id === 'atk_infuse' && !hasAnyBoon) return false;
     return true;

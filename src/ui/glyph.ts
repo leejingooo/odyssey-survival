@@ -198,6 +198,60 @@ function drawGodSigil(ctx: CanvasRenderingContext2D, god: GodId, size: number): 
       ctx.arc(s * 0.3, -s * 0.2, s * 0.2, 0, TAU);
       ctx.fill();
       break;
+    case 'demeter': {
+      // Snowflake: her boons are all winter, and it reads at 26px.
+      for (let i = 0; i < 3; i++) {
+        const angle = (Math.PI / 3) * i;
+        ctx.beginPath();
+        ctx.moveTo(-Math.cos(angle) * s, -Math.sin(angle) * s);
+        ctx.lineTo(Math.cos(angle) * s, Math.sin(angle) * s);
+        ctx.stroke();
+      }
+      ctx.lineWidth = size * 0.05;
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const bx = Math.cos(angle) * s * 0.62;
+        const by = Math.sin(angle) * s * 0.62;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(angle + 0.9) * s * 0.3, by + Math.sin(angle + 0.9) * s * 0.3);
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(angle - 0.9) * s * 0.3, by + Math.sin(angle - 0.9) * s * 0.3);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'artemis': {
+      // Crescent moon, cut out of a full disc.
+      ctx.beginPath();
+      ctx.arc(0, 0, s, 0, TAU);
+      ctx.fill();
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(s * 0.45, -s * 0.2, s * 0.88, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+      break;
+    }
+    case 'dionysus': {
+      // Chalice.
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.75, -s * 0.7);
+      ctx.lineTo(s * 0.75, -s * 0.7);
+      ctx.quadraticCurveTo(s * 0.55, s * 0.15, 0, s * 0.25);
+      ctx.quadraticCurveTo(-s * 0.55, s * 0.15, -s * 0.75, -s * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.lineWidth = size * 0.08;
+      ctx.beginPath();
+      ctx.moveTo(0, s * 0.25);
+      ctx.lineTo(0, s * 0.8);
+      ctx.moveTo(-s * 0.5, s * 0.9);
+      ctx.lineTo(s * 0.5, s * 0.9);
+      ctx.stroke();
+      break;
+    }
     case 'gaia':
       ctx.beginPath();
       ctx.moveTo(0, s);

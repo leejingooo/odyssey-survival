@@ -47,9 +47,19 @@ export function drawRun(run: Run, r: Renderer, wallTime: number): void {
 
 // ------------------------------------------------------------------ player
 
+/**
+ * Heroes are drawn as a hooded body with a weapon held in hand, animated from
+ * two clocks the simulation already keeps: `walkPhase` (a bob while moving) and
+ * `attackProgress` (0 right after a swing, 1 when the next one is ready). That
+ * is enough for the eye to read weight and rhythm without a single sprite.
+ */
 function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): void {
   const p = run.player;
   const hero = run.hero;
+  const bob = Math.sin(p.walkPhase) * 1.8;
+  const lean = Math.cos(p.walkPhase) * 0.06;
+  // Weapons snap out at the moment of the swing and recover over the cooldown.
+  const swing = 1 - Math.min(1, p.attackProgress * 2.6);
 
   // Thanatos' shroud is the weapon, so it is drawn under everything he touches.
   if (hero.weapon === 'aura') {
@@ -61,7 +71,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): 
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius, 0, TAU);
     ctx.fill();
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.3 + swing * 0.35;
     ctx.strokeStyle = hero.accent;
     ctx.lineWidth = 1.5;
     ctx.stroke();
@@ -72,152 +82,226 @@ function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): 
   ctx.globalAlpha = 0.3;
   ctx.fillStyle = '#000';
   ctx.beginPath();
-  ctx.ellipse(p.x, p.y + 11, 12, 5, 0, 0, TAU);
+  ctx.ellipse(p.x, p.y + 11, 11, 4.5, 0, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+
+  // The hero fires where it walks, so the heading gets its own ground marker:
+  // the weapon alone is too easy to lose in a crowd.
+  ctx.save();
+  ctx.translate(p.x, p.y + 10);
+  ctx.rotate(p.facing);
+  ctx.scale(1, 0.42);
+  ctx.globalAlpha = 0.32 + swing * 0.3;
+  ctx.fillStyle = hero.accent;
+  ctx.beginPath();
+  ctx.moveTo(30, 0);
+  ctx.lineTo(14, -10);
+  ctx.lineTo(17, 0);
+  ctx.lineTo(14, 10);
+  ctx.closePath();
   ctx.fill();
   ctx.restore();
 
   ctx.save();
   if (p.invuln > 0 && Math.floor(wallTime * 16) % 2 === 0) ctx.globalAlpha = 0.45;
-  ctx.translate(p.x, p.y);
+  ctx.translate(p.x, p.y + bob);
 
-  // body
-  ctx.fillStyle = p.hurtFlash > 0.2 ? '#ffffff' : hero.color;
-  ctx.beginPath();
-  ctx.arc(0, 0, 11, 0, TAU);
-  ctx.fill();
-  ctx.lineWidth = 2;
+  const skin = p.hurtFlash > 0.2 ? '#ffffff' : hero.color;
+  const trim = p.hurtFlash > 0.2 ? '#ffffff' : hero.accent;
+
+  ctx.rotate(lean);
+  // Cloak: a tapered body that reads as a standing figure at 20 pixels tall.
+  ctx.fillStyle = skin;
   ctx.strokeStyle = '#0a0812';
-  ctx.stroke();
-
-  // facing chevron doubles as the aim indicator
-  ctx.rotate(p.facing);
-  ctx.fillStyle = hero.accent;
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(17, 0);
-  ctx.lineTo(6, -6);
-  ctx.lineTo(8, 0);
-  ctx.lineTo(6, 6);
+  ctx.moveTo(-4.5, -6);
+  ctx.lineTo(4.5, -6);
+  ctx.quadraticCurveTo(9, 6, 7, 11);
+  ctx.lineTo(-7, 11);
+  ctx.quadraticCurveTo(-9, 6, -4.5, -6);
   ctx.closePath();
   ctx.fill();
+  ctx.stroke();
+
+  // Head and hood.
+  ctx.beginPath();
+  ctx.arc(0, -9, 5.4, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = trim;
+  ctx.beginPath();
+  ctx.arc(0, -10.5, 5.4, Math.PI, 0);
+  ctx.fill();
+  ctx.rotate(-lean);
+
+  drawWeapon(ctx, hero.weapon, p.facing, swing, skin, trim);
   ctx.restore();
 
-  for (let i = 0; i < p.shields; i++) {
+  drawShields(ctx, p.x, p.y + bob, p.shields, wallTime);
+}
+
+/** The held weapon, rotated to the hero's heading and thrust on the swing. */
+function drawWeapon(
+  ctx: CanvasRenderingContext2D,
+  weapon: string,
+  facing: number,
+  swing: number,
+  color: string,
+  accent: string,
+): void {
+  ctx.save();
+  ctx.rotate(facing);
+  ctx.translate(7 + swing * 5, 3);
+  ctx.strokeStyle = accent;
+  ctx.fillStyle = accent;
+  ctx.lineCap = 'round';
+
+  switch (weapon) {
+    case 'bow': {
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 7.5, -1.25, 1.25);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(-1.25) * 7.5, Math.sin(-1.25) * 7.5);
+      // The string relaxes forward as the shot is loosed.
+      ctx.quadraticCurveTo(-4 + swing * 5, 0, Math.cos(1.25) * 7.5, Math.sin(1.25) * 7.5);
+      ctx.stroke();
+      break;
+    }
+    case 'sword': {
+      ctx.rotate(-0.5 + swing * 1.1);
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.moveTo(-3, 0);
+      ctx.lineTo(15, 0);
+      ctx.stroke();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-1, -4);
+      ctx.lineTo(-1, 4);
+      ctx.stroke();
+      break;
+    }
+    case 'boulder': {
+      ctx.fillStyle = '#9aa4b2';
+      ctx.strokeStyle = '#3c4250';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.arc(4, -2 - swing * 3, 6.5, 0, TAU);
+      ctx.fill();
+      ctx.stroke();
+      break;
+    }
+    case 'aura': {
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(-2, -12);
+      ctx.lineTo(-2, 9);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(3, -12, 7, Math.PI * 0.95, Math.PI * 1.85);
+      ctx.stroke();
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+/** Athena's aegis: one orbiting disc per charge, so the count is readable. */
+function drawShields(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  count: number,
+  wallTime: number,
+): void {
+  if (count <= 0) return;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(wallTime * 1.1);
+  for (let i = 0; i < count; i++) {
+    const angle = (TAU * i) / count;
+    const px = Math.cos(angle) * 21;
+    const py = Math.sin(angle) * 21;
     ctx.save();
-    ctx.globalAlpha = 0.75;
-    ctx.strokeStyle = '#e8dcb4';
-    ctx.lineWidth = 1.6;
+    ctx.translate(px, py);
+    ctx.rotate(angle + Math.PI / 2);
+    ctx.fillStyle = 'rgba(232, 220, 180, 0.85)';
+    ctx.strokeStyle = '#7d6f45';
+    ctx.lineWidth = 1.2;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 17 + i * 4, wallTime * 1.5, wallTime * 1.5 + Math.PI * 1.4);
+    ctx.moveTo(0, -5.5);
+    ctx.lineTo(4.4, -2.4);
+    ctx.lineTo(3.4, 4.6);
+    ctx.lineTo(0, 6);
+    ctx.lineTo(-3.4, 4.6);
+    ctx.lineTo(-4.4, -2.4);
+    ctx.closePath();
+    ctx.fill();
     ctx.stroke();
     ctx.restore();
   }
+  ctx.restore();
 }
 
 // ------------------------------------------------------------------ enemies
 
 function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
   const s = e.status;
+  const frozen = s.frozenTime > 0;
+  // Hit squash: brief, and read as impact rather than as a size change.
+  const squash = 1 + e.flash * 0.18;
+  const bob = frozen ? 0 : Math.sin(e.anim * 2) * e.radius * 0.09;
+
   ctx.save();
-  ctx.translate(e.x, e.y);
+  ctx.translate(e.x, e.y + bob);
 
   ctx.globalAlpha = 0.28;
   ctx.fillStyle = '#000';
   ctx.beginPath();
-  ctx.ellipse(0, e.radius * 0.85, e.radius * 0.8, e.radius * 0.32, 0, 0, TAU);
+  ctx.ellipse(0, e.radius * 0.9 - bob, e.radius * 0.78, e.radius * 0.3, 0, 0, TAU);
   ctx.fill();
   ctx.globalAlpha = 1;
 
   let fill = e.def.color;
   if (s.charmTime > 0) fill = '#e072b4';
+  else if (frozen) fill = mix(e.def.color, s.frozenKind === 'ice' ? '#bff0ff' : '#7fbf5f', 0.55);
   else if (s.bleedTime > 0) fill = mix(e.def.color, '#d43f43', 0.35);
   else if (s.slowTime > 0) fill = mix(e.def.color, '#3fa9d8', 0.35);
   if (e.flash > 0.05) fill = '#ffffff';
 
+  ctx.scale(1 / squash, squash);
   ctx.fillStyle = fill;
   ctx.strokeStyle = '#08060f';
   ctx.lineWidth = 2;
 
   switch (e.def.id) {
-    case 'harpy': {
-      ctx.beginPath();
-      ctx.moveTo(0, -e.radius);
-      ctx.lineTo(e.radius, e.radius * 0.8);
-      ctx.lineTo(-e.radius, e.radius * 0.8);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+    case 'shade':
+      drawShade(ctx, e);
       break;
-    }
-    case 'spartoi': {
-      const s2 = e.radius * 0.86;
-      ctx.beginPath();
-      ctx.rect(-s2, -s2, s2 * 2, s2 * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = '#08060f';
-      ctx.fillRect(-s2 * 0.45, -s2 * 0.3, s2 * 0.3, s2 * 0.3);
-      ctx.fillRect(s2 * 0.15, -s2 * 0.3, s2 * 0.3, s2 * 0.3);
+    case 'harpy':
+      drawHarpy(ctx, e, frozen);
       break;
-    }
-    case 'siren': {
-      ctx.beginPath();
-      ctx.moveTo(0, -e.radius);
-      ctx.lineTo(e.radius * 0.8, 0);
-      ctx.lineTo(0, e.radius);
-      ctx.lineTo(-e.radius * 0.8, 0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+    case 'spartoi':
+      drawSpartoi(ctx, e);
       break;
-    }
+    case 'siren':
+      drawSiren(ctx, e, frozen);
+      break;
     case 'cyclops':
-    case 'minotaur': {
-      ctx.beginPath();
-      ctx.arc(0, 0, e.radius, 0, TAU);
-      ctx.fill();
-      ctx.stroke();
-      if (e.def.id === 'minotaur') {
-        ctx.strokeStyle = e.def.accent;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(-e.radius * 0.75, -e.radius * 0.6);
-        ctx.lineTo(-e.radius * 1.25, -e.radius * 1.1);
-        ctx.moveTo(e.radius * 0.75, -e.radius * 0.6);
-        ctx.lineTo(e.radius * 1.25, -e.radius * 1.1);
-        ctx.stroke();
-      }
-      ctx.fillStyle = e.def.accent;
-      ctx.beginPath();
-      ctx.arc(0, -e.radius * 0.1, e.radius * 0.28, 0, TAU);
-      ctx.fill();
+      drawCyclops(ctx, e);
       break;
-    }
-    case 'cerberus': {
-      for (let i = -1; i <= 1; i++) {
-        ctx.beginPath();
-        ctx.arc(i * e.radius * 0.55, i === 0 ? -e.radius * 0.2 : 0, e.radius * 0.55, 0, TAU);
-        ctx.fill();
-        ctx.stroke();
-      }
-      ctx.fillStyle = '#ff6a5e';
-      for (let i = -1; i <= 1; i++) {
-        ctx.beginPath();
-        ctx.arc(i * e.radius * 0.55, (i === 0 ? -e.radius * 0.2 : 0) - 3, e.radius * 0.14, 0, TAU);
-        ctx.fill();
-      }
+    case 'minotaur':
+      drawMinotaur(ctx, e);
       break;
-    }
-    default: {
-      ctx.beginPath();
-      ctx.arc(0, 0, e.radius, 0, TAU);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = e.def.accent;
-      ctx.beginPath();
-      ctx.arc(-e.radius * 0.3, -e.radius * 0.2, e.radius * 0.16, 0, TAU);
-      ctx.arc(e.radius * 0.3, -e.radius * 0.2, e.radius * 0.16, 0, TAU);
-      ctx.fill();
-    }
+    case 'cerberus':
+      drawCerberus(ctx, e);
+      break;
   }
 
   if (s.doomTime > 0) {
@@ -229,6 +313,7 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
+  if (frozen) drawFrozenOverlay(ctx, e);
   ctx.restore();
 
   const damaged = e.hp < e.maxHp;
@@ -242,6 +327,221 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
       '#d84a52',
     );
   }
+}
+
+/** Hooded wisp: a cowl over a tattered hem that ripples as it drifts. */
+function drawShade(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const r = e.radius;
+  ctx.beginPath();
+  ctx.moveTo(-r, r * 0.2);
+  ctx.quadraticCurveTo(-r, -r * 1.15, 0, -r * 1.15);
+  ctx.quadraticCurveTo(r, -r * 1.15, r, r * 0.2);
+  for (let i = 0; i <= 4; i++) {
+    const x = r - (i * r * 2) / 4;
+    const wave = Math.sin(e.anim * 3 + i) * r * 0.18;
+    ctx.lineTo(x, r * 0.9 + wave);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = e.def.accent;
+  ctx.beginPath();
+  ctx.arc(-r * 0.32, -r * 0.35, r * 0.15, 0, TAU);
+  ctx.arc(r * 0.32, -r * 0.35, r * 0.15, 0, TAU);
+  ctx.fill();
+}
+
+function drawHarpy(ctx: CanvasRenderingContext2D, e: Enemy, frozen: boolean): void {
+  const r = e.radius;
+  const flap = frozen ? 0.2 : Math.sin(e.anim * 7) * 0.6;
+  ctx.save();
+  for (const side of [-1, 1]) {
+    ctx.save();
+    ctx.scale(side, 1);
+    ctx.rotate(-flap);
+    ctx.beginPath();
+    ctx.moveTo(r * 0.3, -r * 0.2);
+    ctx.quadraticCurveTo(r * 1.8, -r * 0.9, r * 1.9, r * 0.1);
+    ctx.quadraticCurveTo(r * 1.2, r * 0.1, r * 0.3, r * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.55, r * 0.85, 0, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = e.def.accent;
+  ctx.beginPath();
+  ctx.moveTo(0, -r * 0.3);
+  ctx.lineTo(r * 0.5, -r * 0.05);
+  ctx.lineTo(0, r * 0.05);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** Sown-man skeleton: skull, ribs and a scrap of shield. */
+function drawSpartoi(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const r = e.radius;
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.55, -r * 0.2);
+  ctx.lineTo(r * 0.55, -r * 0.2);
+  ctx.lineTo(r * 0.4, r);
+  ctx.lineTo(-r * 0.4, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, -r * 0.6, r * 0.5, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = '#08060f';
+  ctx.lineWidth = 1.4;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.42, r * (0.05 + i * 0.28));
+    ctx.lineTo(r * 0.42, r * (0.05 + i * 0.28));
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#08060f';
+  ctx.beginPath();
+  ctx.arc(-r * 0.18, -r * 0.65, r * 0.12, 0, TAU);
+  ctx.arc(r * 0.18, -r * 0.65, r * 0.12, 0, TAU);
+  ctx.fill();
+}
+
+function drawSiren(ctx: CanvasRenderingContext2D, e: Enemy, frozen: boolean): void {
+  const r = e.radius;
+  const sway = frozen ? 0 : Math.sin(e.anim * 3) * r * 0.4;
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.45, 0);
+  ctx.quadraticCurveTo(0, r * 1.1, sway, r * 1.3);
+  ctx.quadraticCurveTo(r * 0.45, r * 0.6, r * 0.45, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(0, -r * 0.35, r * 0.6, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = e.def.accent;
+  ctx.beginPath();
+  ctx.ellipse(0, -r * 0.35, r * 0.22, r * 0.34, 0, 0, TAU);
+  ctx.fill();
+}
+
+function drawCyclops(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const r = e.radius;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r * 0.95, r, 0, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  // Club, swung slowly from side to side.
+  ctx.save();
+  ctx.rotate(Math.sin(e.anim * 1.6) * 0.5);
+  ctx.strokeStyle = '#5a3f2c';
+  ctx.lineWidth = r * 0.28;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(r * 0.7, -r * 0.1);
+  ctx.lineTo(r * 1.5, -r * 0.8);
+  ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle = e.def.accent;
+  ctx.beginPath();
+  ctx.arc(0, -r * 0.2, r * 0.32, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = '#08060f';
+  ctx.beginPath();
+  ctx.arc(0, -r * 0.2, r * 0.14, 0, TAU);
+  ctx.fill();
+}
+
+function drawMinotaur(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const r = e.radius;
+  const snort = 1 + Math.sin(e.anim * 4) * 0.04;
+  ctx.save();
+  ctx.scale(snort, snort);
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.9, -r * 0.3);
+  ctx.quadraticCurveTo(0, -r * 1.1, r * 0.9, -r * 0.3);
+  ctx.lineTo(r * 0.7, r);
+  ctx.lineTo(-r * 0.7, r);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(0, -r * 0.45, r * 0.62, r * 0.5, 0, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = e.def.accent;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * r * 0.55, -r * 0.6);
+    ctx.quadraticCurveTo(side * r * 1.3, -r * 0.95, side * r * 1.1, -r * 1.45);
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#ff6a5e';
+  ctx.beginPath();
+  ctx.arc(-r * 0.24, -r * 0.5, r * 0.12, 0, TAU);
+  ctx.arc(r * 0.24, -r * 0.5, r * 0.12, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawCerberus(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const r = e.radius;
+  ctx.beginPath();
+  ctx.ellipse(0, r * 0.25, r * 0.95, r * 0.7, 0, 0, TAU);
+  ctx.fill();
+  ctx.stroke();
+  for (const [index, side] of [-1, 0, 1].entries()) {
+    const lift = Math.sin(e.anim * 3 + index * 1.7) * r * 0.08;
+    ctx.beginPath();
+    ctx.ellipse(side * r * 0.6, -r * 0.4 + lift, r * 0.42, r * 0.46, 0, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.fillStyle = '#ff6a5e';
+  for (const [index, side] of [-1, 0, 1].entries()) {
+    const lift = Math.sin(e.anim * 3 + index * 1.7) * r * 0.08;
+    ctx.beginPath();
+    ctx.arc(side * r * 0.6 - r * 0.14, -r * 0.5 + lift, r * 0.09, 0, TAU);
+    ctx.arc(side * r * 0.6 + r * 0.14, -r * 0.5 + lift, r * 0.09, 0, TAU);
+    ctx.fill();
+  }
+}
+
+/** Ice shards or grasping vines, depending on what stopped the enemy. */
+function drawFrozenOverlay(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const r = e.radius;
+  const ice = e.status.frozenKind === 'ice';
+  ctx.save();
+  ctx.globalAlpha = 0.75;
+  ctx.strokeStyle = ice ? '#dff7ff' : '#8fd06a';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 5; i++) {
+    const angle = (TAU * i) / 5 + (ice ? 0.3 : e.anim * 0.4);
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(angle) * r * 0.5, Math.sin(angle) * r * 0.5);
+    if (ice) {
+      ctx.lineTo(Math.cos(angle) * r * 1.35, Math.sin(angle) * r * 1.35);
+    } else {
+      ctx.quadraticCurveTo(
+        Math.cos(angle + 0.6) * r * 1.1,
+        Math.sin(angle + 0.6) * r * 1.1,
+        Math.cos(angle) * r * 1.3,
+        Math.sin(angle) * r * 1.3,
+      );
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawHpBar(
@@ -482,6 +782,14 @@ function drawVfx(ctx: CanvasRenderingContext2D, fx: Vfx): void {
       ctx.lineTo(5, 6);
       ctx.lineTo(-5, 6);
       ctx.closePath();
+      ctx.fill();
+      break;
+    }
+    case 'spark': {
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = fx.color;
+      ctx.beginPath();
+      ctx.arc(fx.x, fx.y, Math.max(0.6, fx.radius * fade), 0, TAU);
       ctx.fill();
       break;
     }

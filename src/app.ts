@@ -6,7 +6,12 @@ import { clearSave, loadSave, writeSave, type SaveData } from './core/storage';
 import type { CardDef } from './data/cards';
 import { godQuote } from './data/gods';
 import { HEROES, type HeroId } from './data/heroes';
-import { Monetization, StubAdProvider, StubBillingProvider } from './game/monetization';
+import {
+  MONETIZATION_ENABLED,
+  Monetization,
+  StubAdProvider,
+  StubBillingProvider,
+} from './game/monetization';
 import { drawRun } from './game/render';
 import { Run, type PendingChoice } from './game/run';
 import { onLocaleChange, setLocale, t } from './i18n';
@@ -17,7 +22,8 @@ import {
   deathScreen,
   heroScreen,
   heroUnlocked,
-  mirrorScreen,
+  chartScreen,
+  pantheonScreen,
   pauseScreen,
   resultScreen,
   settingsScreen,
@@ -281,8 +287,10 @@ export class App {
       switch (screen) {
         case 'heroes':
           return heroScreen(this.ctx);
-        case 'mirror':
-          return mirrorScreen(this.ctx);
+        case 'chart':
+          return chartScreen(this.ctx);
+        case 'pantheon':
+          return pantheonScreen(this.ctx);
         case 'shop':
           return shopScreen(this.ctx);
         case 'settings':
@@ -422,7 +430,8 @@ export class App {
     this.showOverlay(
       deathScreen(run, {
         canFreeRevive: run.revivesLeft > 0,
-        canAdRevive: this.adRevivesUsed < 1 && this.money.ads.isReady('revive'),
+        canAdRevive:
+          MONETIZATION_ENABLED && this.adRevivesUsed < 1 && this.money.ads.isReady('revive'),
         onRevive: (viaAd) => void this.doRevive(viaAd),
         onGiveUp: () => this.endRun(),
       }),

@@ -388,34 +388,34 @@ body {
   margin-top: 4px;
 }
 
-/* ---------- mirror (meta upgrades) ---------- */
+/* ---------- star chart / list rows ---------- */
 
-.mirror-list {
+.row-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.mirror-row {
+.row {
   border: 1px solid rgba(236, 230, 216, 0.14);
   border-radius: 12px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.03);
 }
 
-.mirror-row__head {
+.row__head {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
 
-.mirror-row__name {
+.row__name {
   font-size: 14.5px;
   font-weight: 700;
 }
 
-.mirror-row__desc {
+.row__desc {
   font-size: 12px;
   color: var(--marble-dim);
   margin: 6px 0 9px;
@@ -437,6 +437,84 @@ body {
 .pip.is-on {
   background: var(--gold);
   box-shadow: 0 0 8px rgba(232, 182, 76, 0.6);
+}
+
+/* ---------- pantheon ---------- */
+
+.god-row.is-locked {
+  opacity: 0.6;
+}
+
+.god-row__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.god-row__sigil {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 10px;
+}
+
+.god-row__id {
+  flex: 1;
+  min-width: 0;
+}
+
+.god-row__title {
+  font-size: 11px;
+  color: var(--marble-dim);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+.god-row__head .btn {
+  flex: 0 0 auto;
+  font-size: 13px;
+  padding: 9px 12px;
+  white-space: nowrap;
+}
+
+.god-row__state {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  border-radius: 999px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.god-row__boons {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.god-boon {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--marble-dim);
+  padding-left: 10px;
+  border-left: 2px solid rgba(236, 230, 216, 0.16);
+}
+
+.god-boon__name {
+  color: var(--marble);
+  font-weight: 700;
+}
+
+.god-row__infusion {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(236, 230, 216, 0.1);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--marble-dim);
 }
 
 /* ---------- HUD ---------- */

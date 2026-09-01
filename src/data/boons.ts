@@ -4,7 +4,7 @@ import type { GodId } from './gods';
 
 /**
  * Eight gods, three boons each. A boon is always tied to its god, and the
- * Mirror of Night caps how many *different* gods may bless one voyage — so
+ * Star Chart caps how many *different* gods may bless one voyage — so
  * these are meant to be deepened, not collected.
  */
 export const BOONS: CardDef[] = [
@@ -194,7 +194,7 @@ export const BOONS: CardDef[] = [
     kind: 'boon',
     god: 'athena',
     rarity: 'rare',
-    maxLevel: 3,
+    maxLevel: 4,
     name: L('아이기스', 'Aegis', 'アイギス', '埃癸斯之盾'),
     desc: L(
       '{0}초마다 피해 한 번을 완전히 막는 보호막이 생긴다. 최대 {1}겹.',
@@ -202,10 +202,10 @@ export const BOONS: CardDef[] = [
       '{0}秒ごとに一撃を完全に防ぐ盾を得る。最大{1}枚。',
       '每 {0} 秒获得可完全格挡一次伤害的护盾，最多 {1} 层。',
     ),
-    values: (lv) => [at([8.0, 6.5, 5.0], lv), at([1, 2, 3], lv)],
+    values: (lv) => [at([8.0, 6.5, 5.0, 4.0], lv), at([1, 2, 3, 4], lv)],
     apply: (o, lv) => {
-      o.mech.aegisInterval = at([8.0, 6.5, 5.0], lv);
-      o.mech.aegisMax = at([1, 2, 3], lv);
+      o.mech.aegisInterval = at([8.0, 6.5, 5.0, 4.0], lv);
+      o.mech.aegisMax = at([1, 2, 3, 4], lv);
     },
   },
   {
@@ -489,6 +489,193 @@ export const BOONS: CardDef[] = [
   },
 ];
 
+/**
+ * The three gods added after the first playtest. They sit behind Pantheon
+ * unlocks, so their boons are deliberately a step above the starting pantheon
+ * rather than sidegrades.
+ */
+const LATER_GODS: CardDef[] = [
+  // ------------------------------------------------------------- Demeter
+  {
+    id: 'demeter_frost',
+    kind: 'boon',
+    god: 'demeter',
+    rarity: 'common',
+    maxLevel: 3,
+    name: L('서리', 'Frost', '霜', '寒霜'),
+    desc: L(
+      '적중 시 {0}% 확률로 적을 {1}초 동안 빙결시킨다.',
+      '{0}% chance on hit to freeze an enemy solid for {1}s.',
+      '命中時{0}%の確率で敵を{1}秒間凍結させる。',
+      '命中时有 {0}% 概率将敌人冰冻 {1} 秒。',
+    ),
+    values: (lv) => [at([18, 28, 40], lv), at([1.2, 1.6, 2.2], lv)],
+    apply: (o, lv) => {
+      o.mech.freezeChance = at([0.18, 0.28, 0.4], lv);
+      o.mech.freezeDuration = Math.max(o.mech.freezeDuration, at([1.2, 1.6, 2.2], lv));
+    },
+  },
+  {
+    id: 'demeter_winter',
+    kind: 'boon',
+    god: 'demeter',
+    rarity: 'rare',
+    maxLevel: 3,
+    name: L('겨울의 심판', "Winter's Judgement", '冬の審判', '寒冬审判'),
+    desc: L(
+      '빙결된 적에게 주는 피해 +{0}%. 빙결이 풀릴 때 {1} 파편 피해로 부서진다.',
+      'Deal +{0}% damage to frozen enemies; the freeze shatters for {1} damage.',
+      '凍結した敵へのダメージ+{0}%。凍結が解けると{1}の砕氷ダメージ。',
+      '对冰冻敌人伤害 +{0}%；冰冻结束时炸裂造成 {1} 伤害。',
+    ),
+    values: (lv) => [at([35, 60, 95], lv), at([45, 90, 150], lv)],
+    apply: (o, lv) => {
+      o.mech.shatterBonus += at([0.35, 0.6, 0.95], lv);
+      o.mech.shatterDamage += at([45, 90, 150], lv);
+      // Pointless without a freeze source, so it brings a little of its own.
+      o.mech.freezeChance = Math.max(o.mech.freezeChance, 0.12);
+      o.mech.freezeDuration = Math.max(o.mech.freezeDuration, 1.0);
+    },
+  },
+  {
+    id: 'demeter_abundance',
+    kind: 'boon',
+    god: 'demeter',
+    rarity: 'epic',
+    maxLevel: 3,
+    name: L('풍요', 'Abundance', '豊穣', '丰饶'),
+    desc: L(
+      '경험치 +{0}%. 처치 시 {1}% 확률로 치유의 열매가 떨어진다.',
+      'Experience +{0}%. Kills drop healing fruit {1}% of the time.',
+      '経験値+{0}%。撃破時{1}%の確率で癒やしの実を落とす。',
+      '经验 +{0}%。击杀时有 {1}% 概率掉落治愈果实。',
+    ),
+    values: (lv) => [at([20, 35, 55], lv), at([6, 10, 16], lv)],
+    apply: (o, lv) => {
+      o.stats.xpMult += at([0.2, 0.35, 0.55], lv);
+      o.mech.healDropChance = at([0.06, 0.1, 0.16], lv);
+    },
+  },
+
+  // ------------------------------------------------------------- Artemis
+  {
+    id: 'artemis_mark',
+    kind: 'boon',
+    god: 'artemis',
+    rarity: 'common',
+    maxLevel: 3,
+    name: L('사냥꾼의 표식', "Hunter's Mark", '狩人の印', '猎人印记'),
+    desc: L(
+      '치명타 확률 +{0}%, 치명타 피해 +{1}%.',
+      'Critical chance +{0}%, critical damage +{1}%.',
+      'クリティカル率+{0}%、クリティカルダメージ+{1}%。',
+      '暴击率 +{0}%，暴击伤害 +{1}%。',
+    ),
+    values: (lv) => [at([10, 18, 28], lv), at([20, 40, 65], lv)],
+    apply: (o, lv) => {
+      o.stats.critChance += at([0.1, 0.18, 0.28], lv);
+      o.stats.critMult += at([0.2, 0.4, 0.65], lv);
+    },
+  },
+  {
+    id: 'artemis_moonshaft',
+    kind: 'boon',
+    god: 'artemis',
+    rarity: 'rare',
+    maxLevel: 3,
+    name: L('달빛 화살', 'Moonlit Shafts', '月光の矢', '月光之箭'),
+    desc: L(
+      '공격할 때마다 가까운 적을 쫓는 달빛 화살 {0}발이 함께 날아간다.',
+      'Every attack also looses {0} moonlit shaft(s) that hunt nearby enemies.',
+      '攻撃のたびに近くの敵を追う月光の矢が{0}本放たれる。',
+      '每次攻击额外射出 {0} 支追踪附近敌人的月光之箭。',
+    ),
+    values: (lv) => [at([1, 2, 3], lv)],
+    apply: (o, lv) => {
+      o.mech.moonshafts += at([1, 2, 3], lv);
+    },
+  },
+  {
+    id: 'artemis_silverhunt',
+    kind: 'boon',
+    god: 'artemis',
+    rarity: 'epic',
+    maxLevel: 3,
+    name: L('은빛 사냥', 'Silver Hunt', '銀の狩り', '银色狩猎'),
+    desc: L(
+      '치명타가 터질 때 반경 {0} 안에 피해의 {1}%가 흩뿌려진다.',
+      'Critical hits scatter {1}% of their damage within {0}.',
+      'クリティカル時、半径{0}内に威力の{1}%が飛び散る。',
+      '暴击时在半径 {0} 内溅射 {1}% 的伤害。',
+    ),
+    values: (lv) => [at([70, 90, 115], lv), at([45, 70, 100], lv)],
+    apply: (o, lv) => {
+      o.mech.critSplashRadius = at([70, 90, 115], lv);
+      o.mech.critSplashDamage = at([0.45, 0.7, 1.0], lv);
+    },
+  },
+
+  // ----------------------------------------------------------- Dionysus
+  {
+    id: 'dionysus_draught',
+    kind: 'boon',
+    god: 'dionysus',
+    rarity: 'common',
+    maxLevel: 3,
+    name: L('취기', 'Drunken Draught', '酔い', '醉意'),
+    desc: L(
+      '가한 피해의 {0}%만큼 체력을 회복한다.',
+      'Heal for {0}% of the damage you deal.',
+      '与えたダメージの{0}%だけ体力を回復する。',
+      '按造成伤害的 {0}% 回复生命。',
+    ),
+    values: (lv) => [at([2, 4, 7], lv)],
+    apply: (o, lv) => {
+      o.mech.drain += at([0.02, 0.04, 0.07], lv);
+    },
+  },
+  {
+    id: 'dionysus_vine',
+    kind: 'boon',
+    god: 'dionysus',
+    rarity: 'rare',
+    maxLevel: 3,
+    name: L('포도넝쿨', 'Vine Snare', '葡萄の蔓', '葡萄藤缚'),
+    desc: L(
+      '적중 시 {0}% 확률로 넝쿨이 적을 {1}초 동안 붙잡는다.',
+      '{0}% chance on hit for vines to hold an enemy for {1}s.',
+      '命中時{0}%の確率で蔓が敵を{1}秒間捕らえる。',
+      '命中时有 {0}% 概率以藤蔓缠住敌人 {1} 秒。',
+    ),
+    values: (lv) => [at([14, 22, 32], lv), at([1.0, 1.4, 1.8], lv)],
+    apply: (o, lv) => {
+      o.mech.snareChance = at([0.14, 0.22, 0.32], lv);
+      o.mech.snareDuration = at([1.0, 1.4, 1.8], lv);
+    },
+  },
+  {
+    id: 'dionysus_madness',
+    kind: 'boon',
+    god: 'dionysus',
+    rarity: 'epic',
+    maxLevel: 3,
+    name: L('광기의 잔', 'Cup of Madness', '狂気の杯', '癫狂之杯'),
+    desc: L(
+      '체력이 높을수록 피해가 오른다. 가득 찼을 때 최대 +{0}%.',
+      'The healthier you are the harder you hit: up to +{0}% at full health.',
+      '体力が高いほどダメージが上がる。満タンで最大+{0}%。',
+      '生命越高伤害越强，满血时最多 +{0}%。',
+    ),
+    values: (lv) => [at([25, 45, 70], lv)],
+    apply: (o, lv) => {
+      o.mech.zealBonus += at([0.25, 0.45, 0.7], lv);
+    },
+  },
+];
+
+BOONS.push(...LATER_GODS);
+
+/** Boons grouped by their god, for the Pantheon codex. Built after every push. */
 export const BOONS_BY_GOD: Record<GodId, CardDef[]> = BOONS.reduce(
   (acc, boon) => {
     const god = boon.god as GodId;

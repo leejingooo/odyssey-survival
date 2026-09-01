@@ -109,6 +109,26 @@ export interface Mechanics {
   thornInterval: number;
   thornDamage: number;
   thornCount: number;
+  // Demeter
+  freezeChance: number;
+  freezeDuration: number;
+  /** extra damage multiplier against a frozen enemy */
+  shatterBonus: number;
+  /** damage dealt around an enemy when its freeze expires */
+  shatterDamage: number;
+  healDropChance: number;
+  // Artemis
+  /** extra homing arrows loosed alongside the basic attack */
+  moonshafts: number;
+  critSplashRadius: number;
+  critSplashDamage: number;
+  // Dionysus
+  /** fraction of damage dealt returned as health */
+  drain: number;
+  snareChance: number;
+  snareDuration: number;
+  /** damage bonus that scales with *remaining* health, the mirror of Ares */
+  zealBonus: number;
   // hero innate / weapon upgrades
   reapThreshold: number;
   infusionPower: number;
@@ -156,6 +176,18 @@ export function baseMechanics(): Mechanics {
     thornInterval: 0,
     thornDamage: 0,
     thornCount: 0,
+    freezeChance: 0,
+    freezeDuration: 0,
+    shatterBonus: 0,
+    shatterDamage: 0,
+    healDropChance: 0,
+    moonshafts: 0,
+    critSplashRadius: 0,
+    critSplashDamage: 0,
+    drain: 0,
+    snareChance: 0,
+    snareDuration: 0,
+    zealBonus: 0,
     reapThreshold: 0,
     infusionPower: 0,
   };

@@ -16,6 +16,12 @@ export interface StatusState {
   charmTime: number;
   doomTime: number;
   doomDamage: number;
+  /** frozen or snared: the enemy cannot move or attack while this runs */
+  frozenTime: number;
+  /** only changes how the freeze is drawn - ice shards vs grasping vines */
+  frozenKind: 'ice' | 'vine';
+  /** shatter damage owed when the freeze expires, from Demeter */
+  shatterDamage: number;
 }
 
 export function emptyStatus(): StatusState {
@@ -29,6 +35,9 @@ export function emptyStatus(): StatusState {
     charmTime: 0,
     doomTime: 0,
     doomDamage: 0,
+    frozenTime: 0,
+    frozenKind: 'ice',
+    shatterDamage: 0,
   };
 }
 
@@ -58,6 +67,8 @@ export interface Enemy {
   shootCd: number;
   /** strafe wobble seed */
   phase: number;
+  /** free-running animation clock, advanced faster the quicker the enemy moves */
+  anim: number;
   dead: boolean;
   isBoss: boolean;
 }
@@ -86,6 +97,8 @@ export interface Projectile {
   color: string;
   /** Poseidon's empowered every-Nth shot */
   empowered: boolean;
+  /** god whose power this shot carries, from Divine Infusion */
+  infusion: GodId | null;
   /** orbiting scythes are bound to the player instead of flying */
   orbitAngle: number;
   orbitRadius: number;
@@ -128,7 +141,16 @@ export interface Puddle {
   maxLife: number;
 }
 
-export type VfxKind = 'sweep' | 'burst' | 'ring' | 'bolt' | 'chain' | 'thorn' | 'text' | 'shield';
+export type VfxKind =
+  | 'sweep'
+  | 'burst'
+  | 'ring'
+  | 'bolt'
+  | 'chain'
+  | 'thorn'
+  | 'text'
+  | 'spark'
+  | 'shield';
 
 export interface Vfx {
   id: number;
@@ -144,15 +166,10 @@ export interface Vfx {
   maxLife: number;
   color: string;
   text: string;
-  /** damage numbers drift upward */
+  /** sparks and damage numbers drift */
+  vx: number;
   vy: number;
   scale: number;
-}
-
-export interface Orbiter {
-  angle: number;
-  radius: number;
-  cooldown: Map<number, number>;
 }
 
 /** Everything the player needs at runtime that is not part of `Stats`. */
@@ -174,7 +191,13 @@ export interface PlayerState {
   slaughterTime: number;
   attackCounter: number;
   hurtFlash: number;
+  /** advances while moving; drives the walk bob and the weapon sway */
+  walkPhase: number;
+  /** 0 just after a swing, 1 when the next one is ready */
+  attackProgress: number;
   /** infused god cycles so a multi-god build sees all of its elements */
   infusionIndex: number;
   infusedGods: GodId[];
+  /** the god carried by the shot being fired right now, for colour and effect */
+  currentInfusion: GodId | null;
 }

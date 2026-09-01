@@ -36,7 +36,7 @@ export const RARITY_WEIGHT: Record<Rarity, number> = {
   legendary: 5,
 };
 
-/** Luck (from perks and the Mirror) tilts the draw toward the top of the table. */
+/** Luck (from perks and the Star Chart) tilts the draw toward the top of the table. */
 export function rarityWeight(rarity: Rarity, luck: number): number {
   const base = RARITY_WEIGHT[rarity];
   const bonus =

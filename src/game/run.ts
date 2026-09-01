@@ -16,9 +16,9 @@ import {
   type EnemyDef,
   type EnemyId,
 } from '../data/enemies';
-import { GODS, type GodId } from '../data/gods';
+import { availableGods, GODS, type GodId } from '../data/gods';
 import type { HeroDef } from '../data/heroes';
-import { chestRateMult, maxBoonGods, startingLevel, startingRevives } from '../data/mirror';
+import { chestRateMult, maxBoonGods, startingLevel, startingRevives } from '../data/starchart';
 import { t } from '../i18n';
 import {
   emptyStatus,
@@ -147,8 +147,11 @@ export class Run {
       slaughterTime: 0,
       attackCounter: 0,
       hurtFlash: 0,
+      walkPhase: 0,
+      attackProgress: 1,
       infusionIndex: 0,
       infusedGods: [],
+      currentInfusion: null,
     };
     this.renderer.camera.x = 0;
     this.renderer.camera.y = 0;
@@ -164,6 +167,10 @@ export class Run {
     return ownedGods(this.owned);
   }
 
+  get availableGods(): Set<GodId> {
+    return availableGods(this.save);
+  }
+
   get stats() {
     return this.loadout.stats;
   }
@@ -172,10 +179,15 @@ export class Run {
     return this.loadout.mech;
   }
 
-  /** Effective damage multiplier including Ares' health-scaled wrath. */
+  /**
+   * Effective damage multiplier. Ares pays out as your health drains, Dionysus
+   * pays out while it is full — a build can chase either, rarely both.
+   */
   private damageMult(): number {
-    const missing = 1 - this.player.hp / Math.max(1, this.player.maxHp);
-    return this.stats.damageMult * (1 + this.mech.wrathBonus * missing);
+    const fraction = this.player.hp / Math.max(1, this.player.maxHp);
+    const wrath = this.mech.wrathBonus * (1 - fraction);
+    const zeal = this.mech.zealBonus * fraction;
+    return this.stats.damageMult * (1 + wrath + zeal);
   }
 
   private rebuildLoadout(): void {
@@ -218,6 +230,7 @@ export class Run {
         splashDamage: 0,
         color: this.hero.accent,
         empowered: false,
+        infusion: null,
         orbitAngle: (TAU * this.orbiters.length) / Math.max(1, want),
         orbitRadius: 74,
       });
@@ -272,6 +285,7 @@ export class Run {
     // The hero attacks the way it travels; standing still keeps the last heading.
     if (ix !== 0 || iy !== 0) p.facing = Math.atan2(iy, ix);
 
+    p.walkPhase += Math.hypot(ix, iy) * dt * 9;
     p.invuln = Math.max(0, p.invuln - dt);
     p.hurtFlash = Math.max(0, p.hurtFlash - dt * 3);
     p.slaughterTime = Math.max(0, p.slaughterTime - dt);
@@ -282,6 +296,7 @@ export class Run {
 
     const haste = 1 + (p.slaughterTime > 0 ? this.mech.slaughterHaste : 0);
     p.attackCd -= dt * this.stats.attackSpeedMult * haste;
+    p.attackProgress = clamp(1 - p.attackCd / Math.max(0.05, this.hero.weaponBase.cooldown), 0, 1);
     if (p.attackCd <= 0) {
       const base = this.hero.weaponBase.cooldown;
       p.attackCd += Math.max(0.05, base);
@@ -346,6 +361,42 @@ export class Run {
         audio.play('aura');
         break;
     }
+    this.fireMoonshafts();
+  }
+
+  /** Artemis' extra arrows: weak, but they always find something. */
+  private fireMoonshafts(): void {
+    const count = this.mech.moonshafts;
+    if (count <= 0) return;
+    const p = this.player;
+    const damage = this.hero.weaponBase.damage * this.damageMult() * 0.55;
+    for (let i = 0; i < count; i++) {
+      const angle = p.facing + (i - (count - 1) / 2) * 0.55 + this.rng.range(-0.12, 0.12);
+      this.projectiles.push({
+        id: newId(),
+        kind: 'arrow',
+        hostile: false,
+        x: p.x,
+        y: p.y,
+        vx: Math.cos(angle) * 330,
+        vy: Math.sin(angle) * 330,
+        angle,
+        spin: 0,
+        radius: 4.5,
+        damage,
+        life: 1.4,
+        pierceLeft: 0,
+        homing: 0.9,
+        hit: new Set(),
+        splashRadius: 0,
+        splashDamage: 0,
+        color: GODS.artemis.accent,
+        empowered: false,
+        infusion: null,
+        orbitAngle: 0,
+        orbitRadius: 0,
+      });
+    }
   }
 
   private attackDamage(empowered: boolean): number {
@@ -385,6 +436,7 @@ export class Run {
     const speed = wb.speed * this.stats.projectileSpeedMult;
     const life = (wb.range * this.stats.rangeMult) / speed;
     const spread = count > 1 ? 0.16 : 0;
+    const infusionColor = p.currentInfusion ? GODS[p.currentInfusion].accent : null;
 
     const aim = this.aimAngle();
     for (let i = 0; i < count; i++) {
@@ -408,8 +460,9 @@ export class Run {
         hit: new Set(),
         splashRadius: this.mech.splashRadius,
         splashDamage: this.mech.splashDamage,
-        color: empowered ? GODS.poseidon.accent : this.hero.accent,
+        color: infusionColor ?? (empowered ? GODS.poseidon.accent : this.hero.accent),
         empowered,
+        infusion: p.currentInfusion,
         orbitAngle: 0,
         orbitRadius: 0,
       });
@@ -423,6 +476,11 @@ export class Run {
     const arc = (wb.arc ?? 1) * (1 + (this.stats.sizeMult - 1) * 0.5);
     const sweeps = 1 + this.stats.projectiles;
     const damage = this.attackDamage(empowered);
+    const tint = p.currentInfusion
+      ? GODS[p.currentInfusion].accent
+      : empowered
+        ? GODS.poseidon.accent
+        : this.hero.accent;
 
     const aim = this.aimAngle();
     for (let i = 0; i < sweeps; i++) {
@@ -434,7 +492,7 @@ export class Run {
         angle,
         arc,
         life: 0.18,
-        color: empowered ? GODS.poseidon.accent : this.hero.accent,
+        color: tint,
       });
       this.damageCone(p.x, p.y, reach, angle, arc, damage, empowered);
     }
@@ -447,13 +505,23 @@ export class Run {
     this.spawnVfx('ring', p.x, p.y, {
       radius,
       life: 0.25,
-      color: empowered ? GODS.poseidon.accent : this.hero.accent,
+      color: p.currentInfusion
+        ? GODS[p.currentInfusion].accent
+        : empowered
+          ? GODS.poseidon.accent
+          : this.hero.accent,
     });
     const near = this.grid.query(p.x, p.y, radius, this.scratch);
     for (const enemy of near) {
       if (enemy.dead || enemy.status.charmTime > 0) continue;
       if (dist2(enemy.x, enemy.y, p.x, p.y) > (radius + enemy.radius) ** 2) continue;
-      this.hitEnemy(enemy, damage, { onHit: true, empowered, fromX: p.x, fromY: p.y });
+      this.hitEnemy(enemy, damage, {
+        onHit: true,
+        empowered,
+        fromX: p.x,
+        fromY: p.y,
+        infusion: p.currentInfusion,
+      });
     }
     for (const chest of this.chests) {
       if (dist2(chest.x, chest.y, p.x, p.y) <= (radius + chest.radius) ** 2) {
@@ -480,7 +548,13 @@ export class Run {
       let delta = Math.abs(Math.atan2(dy, dx) - angle) % TAU;
       if (delta > Math.PI) delta = TAU - delta;
       if (delta > arc) continue;
-      this.hitEnemy(enemy, damage, { onHit: true, empowered, fromX: x, fromY: y });
+      this.hitEnemy(enemy, damage, {
+        onHit: true,
+        empowered,
+        fromX: x,
+        fromY: y,
+        infusion: this.player.currentInfusion,
+      });
     }
     for (const chest of this.chests) {
       const dx = chest.x - x;
@@ -586,20 +660,40 @@ export class Run {
     }
   }
 
-  private applyInfusion(enemy: Enemy, baseDamage: number): void {
+  /**
+   * Divine Infusion. Each god rewrites the basic attack in its own idiom, and
+   * the shot is already tinted that god's colour by the time it lands, so the
+   * effect never arrives unannounced.
+   */
+  private applyInfusion(enemy: Enemy, baseDamage: number, god: GodId): void {
     const power = this.mech.infusionPower;
-    const gods = this.player.infusedGods;
-    if (power <= 0 || gods.length === 0) return;
-    const god = gods[this.player.infusionIndex % gods.length];
-    this.player.infusionIndex++;
+    if (power <= 0) return;
     switch (god) {
-      case 'zeus':
-        this.chainFrom(enemy, baseDamage * 0.4 * power, 1, 120);
+      case 'zeus': {
+        // Radiating discharge rather than the boon's chain: a different shape
+        // of the same idea, so running both feels like two tools.
+        const radius = 66 + 34 * power;
+        this.spawnVfx('ring', enemy.x, enemy.y, {
+          radius,
+          life: 0.22,
+          color: GODS.zeus.accent,
+        });
+        this.areaDamage(enemy.x, enemy.y, radius, baseDamage * 0.45 * power, false);
         break;
-      case 'poseidon':
-        this.areaDamage(enemy.x, enemy.y, 42, baseDamage * 0.4 * power, false);
-        this.knockback(enemy, 20 * power);
+      }
+      case 'poseidon': {
+        const radius = 62;
+        this.spawnVfx('ring', enemy.x, enemy.y, {
+          radius,
+          life: 0.2,
+          color: GODS.poseidon.accent,
+        });
+        for (const other of this.grid.query(enemy.x, enemy.y, radius, this.scratch)) {
+          if (!other.dead) this.knockback(other, 24 * power, enemy.x, enemy.y);
+        }
+        this.areaDamage(enemy.x, enemy.y, radius, baseDamage * 0.3 * power, false);
         break;
+      }
       case 'ares':
         enemy.status.bleedDps = Math.max(enemy.status.bleedDps, 8 * power * this.damageMult());
         enemy.status.bleedTime = Math.max(enemy.status.bleedTime, 3);
@@ -630,6 +724,15 @@ export class Run {
           this.hitEnemy(enemy, baseDamage * 0.5 * power, { onHit: false });
         }
         break;
+      case 'demeter':
+        if (this.rng.chance(0.3 * power)) this.freezeEnemy(enemy, 0.9 * power, 'ice');
+        break;
+      case 'artemis':
+        // Handled as bonus critical chance before the damage roll.
+        break;
+      case 'dionysus':
+        this.healPlayer(baseDamage * 0.12 * power);
+        break;
     }
   }
 
@@ -638,15 +741,47 @@ export class Run {
   private hitEnemy(
     enemy: Enemy,
     rawDamage: number,
-    opts: { onHit?: boolean; empowered?: boolean; fromX?: number; fromY?: number },
+    opts: {
+      onHit?: boolean;
+      empowered?: boolean;
+      fromX?: number;
+      fromY?: number;
+      infusion?: GodId | null;
+    },
   ): void {
     if (enemy.dead) return;
     let damage = rawDamage;
-    const crit = this.rng.chance(this.stats.critChance);
+
+    // Artemis' infusion is a sharpened shot rather than an on-hit rider, so it
+    // lands here, before the roll.
+    const infusion = opts.onHit ? (opts.infusion ?? null) : null;
+    const critBonus = infusion === 'artemis' ? 0.3 * this.mech.infusionPower : 0;
+    const crit = this.rng.chance(this.stats.critChance + critBonus);
     if (crit) damage *= this.stats.critMult;
+
+    // Frozen enemies are brittle.
+    if (enemy.status.frozenTime > 0 && this.mech.shatterBonus > 0) {
+      damage *= 1 + this.mech.shatterBonus;
+    }
 
     enemy.hp -= damage;
     enemy.flash = 1;
+
+    if (this.mech.drain > 0) this.healPlayer(damage * this.mech.drain);
+    if (crit && this.mech.critSplashRadius > 0) {
+      this.spawnVfx('ring', enemy.x, enemy.y, {
+        radius: this.mech.critSplashRadius,
+        life: 0.2,
+        color: GODS.artemis.accent,
+      });
+      this.areaDamage(
+        enemy.x,
+        enemy.y,
+        this.mech.critSplashRadius,
+        damage * this.mech.critSplashDamage,
+        false,
+      );
+    }
 
     if (this.damageTextCd <= 0) {
       this.damageTextCd = 0.05;
@@ -680,6 +815,11 @@ export class Run {
           color: GODS.aphrodite.accent,
         });
       }
+      if (m.freezeChance > 0 && this.rng.chance(m.freezeChance)) {
+        this.freezeEnemy(enemy, m.freezeDuration, 'ice');
+      } else if (m.snareChance > 0 && this.rng.chance(m.snareChance)) {
+        this.freezeEnemy(enemy, m.snareDuration, 'vine');
+      }
       if (m.knockback > 0) this.knockback(enemy, m.knockback, opts.fromX, opts.fromY);
       if (m.splashRadius > 0 && m.splashDamage > 0) {
         this.areaDamage(enemy.x, enemy.y, m.splashRadius, damage * m.splashDamage, false);
@@ -687,7 +827,7 @@ export class Run {
       if (m.chainJumps > 0) {
         this.chainFrom(enemy, damage * m.chainDamage, m.chainJumps, m.chainRange);
       }
-      this.applyInfusion(enemy, damage);
+      if (infusion) this.applyInfusion(enemy, damage, infusion);
     }
 
     // Thanatos reaps anything already at death's door.
@@ -698,6 +838,18 @@ export class Run {
 
     if (enemy.hp <= 0) this.killEnemy(enemy);
     else audio.play('hit', 0.2);
+  }
+
+  /** Bosses shrug off hard crowd control; everything else stops dead. */
+  private freezeEnemy(enemy: Enemy, duration: number, kind: 'ice' | 'vine'): void {
+    if (duration <= 0) return;
+    const scaled = enemy.isBoss ? duration * 0.35 : duration;
+    if (scaled <= enemy.status.frozenTime) return;
+    enemy.status.frozenTime = scaled;
+    enemy.status.frozenKind = kind;
+    if (kind === 'ice' && this.mech.shatterDamage > 0) {
+      enemy.status.shatterDamage = this.mech.shatterDamage * this.damageMult();
+    }
   }
 
   /**
@@ -728,6 +880,17 @@ export class Run {
       life: 0.3,
       color: enemy.def.accent,
     });
+    for (let i = 0; i < 5; i++) {
+      const angle = this.rng.angle();
+      const speed = this.rng.range(60, 170);
+      this.spawnVfx('spark', enemy.x, enemy.y, {
+        life: this.rng.range(0.25, 0.5),
+        color: enemy.def.accent,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: this.rng.range(2, 4),
+      });
+    }
     audio.play('kill', 0.25);
     if (enemy.isBoss) {
       this.renderer.addShake(14);
@@ -743,6 +906,9 @@ export class Run {
       this.dropPickup('gold', enemy.x, enemy.y, enemy.def.gold);
     } else if (this.rng.chance(0.02)) {
       this.dropPickup('heal', enemy.x, enemy.y, 12);
+    }
+    if (m.healDropChance > 0 && this.rng.chance(m.healDropChance)) {
+      this.dropPickup('heal', enemy.x, enemy.y, 14);
     }
 
     // On-kill boons
@@ -935,6 +1101,7 @@ export class Run {
       chargeY: 0,
       shootCd: this.rng.range(0.5, def.shootInterval ?? 2),
       phase: this.rng.angle(),
+      anim: this.rng.angle(),
       dead: false,
       isBoss: isBoss || def.boss === true,
     });
@@ -992,6 +1159,26 @@ export class Run {
       }
       if (s.charmTime > 0) s.charmTime -= dt;
       e.flash = Math.max(0, e.flash - dt * 5);
+      e.anim += dt * (2 + e.speed * 0.04);
+
+      if (s.frozenTime > 0) {
+        s.frozenTime -= dt;
+        if (s.frozenTime <= 0 && s.shatterDamage > 0) {
+          const shatter = s.shatterDamage;
+          s.shatterDamage = 0;
+          this.spawnVfx('burst', e.x, e.y, {
+            radius: 46,
+            life: 0.3,
+            color: GODS.demeter.accent,
+          });
+          this.areaDamage(e.x, e.y, 46, shatter, false);
+          if (e.dead) continue;
+        }
+        // Held in place: no steering, no contact damage, still very killable.
+        e.vx *= Math.exp(-10 * dt);
+        e.vy *= Math.exp(-10 * dt);
+        continue;
+      }
 
       // steering
       const weakenMult = s.weakenTime > 0 ? 1 - s.weaken : 1;
@@ -1140,6 +1327,7 @@ export class Run {
       splashDamage: 0,
       color: enemy.def.accent,
       empowered: false,
+      infusion: null,
       orbitAngle: 0,
       orbitRadius: 0,
     });
@@ -1182,6 +1370,7 @@ export class Run {
           empowered: proj.empowered,
           fromX: proj.x,
           fromY: proj.y,
+          infusion: proj.infusion,
         });
         if (proj.kind === 'boulder' && proj.splashRadius > 0) this.explodeBoulder(proj, false);
         if (proj.pierceLeft <= 0) {
@@ -1260,7 +1449,12 @@ export class Run {
         if (dist2(orb.x, orb.y, enemy.x, enemy.y) > reach * reach) continue;
         if (orb.hit.has(enemy.id)) continue;
         orb.hit.add(enemy.id);
-        this.hitEnemy(enemy, damage, { onHit: true, fromX: orb.x, fromY: orb.y });
+        this.hitEnemy(enemy, damage, {
+          onHit: true,
+          fromX: orb.x,
+          fromY: orb.y,
+          infusion: this.player.currentInfusion,
+        });
       }
       // Scythes re-arm on every revolution rather than tracking per-enemy timers.
       if (orb.orbitAngle > TAU) {
@@ -1316,6 +1510,7 @@ export class Run {
       owned: this.owned,
       luck: this.stats.luck,
       maxGods: this.maxGods,
+      availableGods: this.availableGods,
     });
     this.pushChoice({ source: 'chest', offers, level: this.level });
   }
@@ -1405,6 +1600,7 @@ export class Run {
         owned: this.owned,
         luck: this.stats.luck,
         maxGods: this.maxGods,
+        availableGods: this.availableGods,
       });
       this.pushChoice({ source: 'levelup', offers, level: this.level });
     }
@@ -1413,7 +1609,14 @@ export class Run {
   private stepVfx(dt: number): void {
     for (const fx of this.vfx) {
       fx.life -= dt;
-      if (fx.kind === 'text') fx.y += fx.vy * dt;
+      if (fx.kind === 'text') {
+        fx.y += fx.vy * dt;
+      } else if (fx.kind === 'spark') {
+        fx.x += fx.vx * dt;
+        fx.y += fx.vy * dt;
+        fx.vx *= Math.exp(-3 * dt);
+        fx.vy *= Math.exp(-3 * dt);
+      }
     }
   }
 
@@ -1437,6 +1640,7 @@ export class Run {
       maxLife: opts.life,
       color: opts.color ?? '#ffffff',
       text: opts.text ?? '',
+      vx: opts.vx ?? 0,
       vy: opts.vy ?? -28,
       scale: opts.scale ?? 1,
     });
@@ -1519,7 +1723,7 @@ export class Run {
     if (this.queue.length > 0) this.presentNextChoice();
   }
 
-  /** Ad-reward or Mirror revive: clear the area and stand back up. */
+  /** Ad-reward or Star Chart revive: clear the area and stand back up. */
   revive(): boolean {
     if (this.phase !== 'dead') return false;
     this.player.hp = this.player.maxHp * 0.6;
