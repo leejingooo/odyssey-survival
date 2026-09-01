@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # Chromium comes from the Playwright action step below, not from npm's
+      # postinstall, which would download a second copy on every run.
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck and build
+        run: npm run build
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Serve the build
+        run: npx vite preview --port 4173 --host 127.0.0.1 &
+      - name: Wait for the server
+        run: npx wait-on http://127.0.0.1:4173 --timeout 60000
+      - name: Make a screenshot directory
+        run: mkdir -p shots
+      - name: Smoke test
+        run: npm run test:smoke
+        env:
+          # CI runners animate slower than a laptop, so give the run enough
+          # frames to reach a treasure chest.
+          STEPS: '400'
+          OUT: shots
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-screenshots
+          path: shots/
+          if-no-files-found: ignore

@@ -1,17 +1,24 @@
-# Godot 4+ specific ignores
-.godot/
-.nomedia
+# dependencies
+node_modules/
 
-# Godot-specific ignores
-.import/
-export.cfg
-export_credentials.cfg
-*.tmp
+# build output
+dist/
+dist-ssr/
+*.local
 
-# Imported translations (automatically generated from CSV files)
-*.translation
+# Capacitor native projects (generated with `npx cap add android|ios`)
+android/
+ios/
 
-# Mono-specific ignores
-.mono/
-data_*/
-mono_crash.*.json
+# editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
