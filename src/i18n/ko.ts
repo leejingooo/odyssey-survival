@@ -1,0 +1,211 @@
+// Korean is the source-of-truth dictionary. Every other locale is typed against it.
+export const ko = {
+  'lang.name': '한국어',
+
+  // ---------- generic UI ----------
+  'ui.play': '항해 시작',
+  'ui.continue': '계속',
+  'ui.back': '뒤로',
+  'ui.close': '닫기',
+  'ui.confirm': '확인',
+  'ui.cancel': '취소',
+  'ui.select': '선택',
+  'ui.locked': '잠김',
+  'ui.unlock': '해금',
+  'ui.maxed': '최대',
+  'ui.gold': '골드',
+  'ui.level': '레벨',
+  'ui.time': '시간',
+  'ui.kills': '처치',
+  'ui.settings': '설정',
+  'ui.language': '언어',
+  'ui.sound': '효과음',
+  'ui.music': '음악',
+  'ui.haptics': '진동',
+  'ui.on': '켜짐',
+  'ui.off': '꺼짐',
+  'ui.pause': '일시정지',
+  'ui.resume': '이어하기',
+  'ui.quit': '포기하기',
+  'ui.quitConfirm': '정말 이 항해를 포기하시겠습니까? 획득한 골드는 유지됩니다.',
+  'ui.reset': '기록 초기화',
+  'ui.resetConfirm': '모든 해금과 골드가 사라집니다. 계속할까요?',
+  'ui.notEnoughGold': '골드가 부족합니다',
+  'ui.purchased': '해금했습니다',
+  'ui.tapToStart': '화면을 눌러 시작',
+  'ui.credits': '오디세이 서바이벌',
+
+  // ---------- title / menu ----------
+  'menu.title': '오디세이 서바이벌',
+  'menu.subtitle': '끝나지 않는 귀향',
+  'menu.mirror': '밤의 거울',
+  'menu.shop': '상점',
+  'menu.heroes': '영웅 선택',
+  'menu.bestTime': '최고 기록',
+  'menu.runs': '항해 횟수',
+
+  // ---------- hero select ----------
+  'hero.select.title': '영웅을 선택하라',
+  'hero.select.hint': '아무 곳이나 끌어 움직이세요. 영웅은 나아가는 방향으로 스스로 공격합니다.',
+  'hero.unlockFor': '{0} 골드로 해금',
+
+  'hero.odysseus.name': '오디세우스',
+  'hero.odysseus.role': '궁수',
+  'hero.odysseus.weapon': '이타케의 활',
+  'hero.odysseus.desc': '나아가는 방향으로 화살을 쏜다. 사거리가 길고 관통이 쉽게 붙는다.',
+
+  'hero.achilles.name': '아킬레우스',
+  'hero.achilles.role': '전사',
+  'hero.achilles.desc': '전방을 넓게 베어 넘긴다. 피해가 크고 적을 밀어내지만 사거리가 짧다.',
+  'hero.achilles.weapon': '펠리온의 창검',
+
+  'hero.sisyphus.name': '시지프스',
+  'hero.sisyphus.role': '투척가',
+  'hero.sisyphus.desc': '무거운 바위를 굴려 던진다. 느리지만 관통하며 착탄 시 광역 피해를 준다.',
+  'hero.sisyphus.weapon': '영원의 바위',
+
+  'hero.thanatos.name': '타나토스',
+  'hero.thanatos.role': '사신',
+  'hero.thanatos.desc':
+    '주변에 죽음의 장막을 두른다. 조준이 필요 없고, 빈사 상태의 적을 즉시 거둔다.',
+  'hero.thanatos.weapon': '죽음의 장막',
+
+  // ---------- gods ----------
+  'god.zeus': '제우스',
+  'god.poseidon': '포세이돈',
+  'god.ares': '아레스',
+  'god.athena': '아테나',
+  'god.aphrodite': '아프로디테',
+  'god.hermes': '헤르메스',
+  'god.hades': '하데스',
+  'god.gaia': '가이아',
+
+  'god.zeus.title': '천둥의 왕',
+  'god.poseidon.title': '바다의 지배자',
+  'god.ares.title': '전쟁의 신',
+  'god.athena.title': '지혜의 여신',
+  'god.aphrodite.title': '사랑의 여신',
+  'god.hermes.title': '전령의 신',
+  'god.hades.title': '지하의 왕',
+  'god.gaia.title': '대지의 어머니',
+
+  // ---------- chest / cards ----------
+  'chest.title': '보물상자',
+  'chest.opened': '상자가 열렸다',
+  'chest.pick': '하나를 취하라',
+  'levelup.title': '레벨 {0}',
+  'levelup.pick': '힘을 하나 고르라',
+  'card.boon': '신의 축복',
+  'card.weapon': '무기 연마',
+  'card.perk': '영웅의 힘',
+  'card.level': '{0}단계',
+  'card.newLevel': '새로운 축복',
+  'card.upgradeTo': '{0}단계로',
+  'card.reroll': '다시 뽑기',
+  'card.blocked': '신탁의 그릇이 가득 찼다 ({0}종)',
+
+  // ---------- rarity ----------
+  'rarity.common': '평범',
+  'rarity.rare': '희귀',
+  'rarity.epic': '영웅',
+  'rarity.legendary': '전설',
+
+  // ---------- HUD / results ----------
+  'hud.wave': '{0}구역',
+  'result.victory': '귀향',
+  'result.defeat': '쓰러졌다',
+  'result.survived': '버틴 시간',
+  'result.goldEarned': '획득 골드',
+  'result.levelReached': '도달 레벨',
+  'result.retry': '다시 항해',
+  'result.toTitle': '항구로',
+  'result.revive': '부활하기',
+  'result.doubleGold': '골드 2배',
+  'result.newRecord': '신기록!',
+
+  // ---------- mirror (meta) ----------
+  'mirror.title': '밤의 거울',
+  'mirror.subtitle': '죽음은 배움이다. 골드로 영웅을 벼려라.',
+  'mirror.rank': '{0} / {1}',
+  'mirror.cost': '{0} 골드',
+
+  'mirror.boonSlots.name': '신탁의 그릇',
+  'mirror.boonSlots.desc': '한 항해에서 동시에 받을 수 있는 신의 축복 종류. 지금은 최대 {0}종.',
+  'mirror.vitality.name': '불굴의 심장',
+  'mirror.vitality.desc': '시작 최대 체력 +{0}',
+  'mirror.might.name': '영웅의 피',
+  'mirror.might.desc': '모든 피해 +{0}%',
+  'mirror.swift.name': '날랜 발',
+  'mirror.swift.desc': '이동 속도 +{0}%',
+  'mirror.fortune.name': '부의 축복',
+  'mirror.fortune.desc': '획득 골드 +{0}%',
+  'mirror.wisdom.name': '예언의 지혜',
+  'mirror.wisdom.desc': '획득 경험치 +{0}%',
+  'mirror.defiance.name': '저승의 반항',
+  'mirror.defiance.desc': '항해당 {0}회 부활한다',
+  'mirror.treasure.name': '보물 감각',
+  'mirror.treasure.desc': '보물상자 출현 +{0}%, 희귀 카드 확률 상승',
+  'mirror.headstart.name': '선견지명',
+  'mirror.headstart.desc': '{0}레벨에서 시작한다',
+
+  // ---------- shop ----------
+  'shop.title': '상점',
+  'shop.subtitle': '광고를 보거나 결제해 항해를 앞당기세요.',
+  'shop.watchAd': '광고 보기',
+  'shop.adGold.name': '뱃사공의 삯',
+  'shop.adGold.desc': '광고를 보고 {0} 골드를 받습니다. ({1}/{2}회 남음)',
+  'shop.adCooldown': '잠시 후 다시 시도하세요',
+  'shop.goldPack.name': '{0} 골드 꾸러미',
+  'shop.removeAds.name': '광고 제거',
+  'shop.removeAds.desc': '모든 강제 광고를 제거하고 보상 광고 보상을 2배로.',
+  'shop.unlockAll.name': '영웅 전원 해금',
+  'shop.unlockAll.desc': '네 영웅을 즉시 모두 사용합니다.',
+  'shop.owned': '보유 중',
+  'shop.buy': '구매',
+  'shop.restore': '구매 복원',
+  'shop.stub': '결제 모듈이 연결되지 않았습니다 (개발 빌드)',
+  'shop.adReward': '{0} 골드를 받았습니다',
+
+  // ---------- enemies ----------
+  'enemy.shade': '망령',
+  'enemy.harpy': '하르피이아',
+  'enemy.spartoi': '스파르토이',
+  'enemy.cyclops': '키클롭스',
+  'enemy.siren': '세이렌',
+  'enemy.minotaur': '미노타우로스',
+  'enemy.cerberus': '케르베로스',
+  'enemy.boss': '{0} 등장',
+
+  // ---------- narrative ----------
+  'story.intro':
+    '바다는 너를 놓아주지 않는다. 이타케가 보일 때마다 파도가 다시 너를 삼킨다. 그러나 신들은 지켜보고 있으며, 지루해하고 있다.',
+  'story.runStart.odysseus': '"또 시작이군. 이번엔 조금 더 멀리 가보지."',
+  'story.runStart.achilles': '"영광이든 죽음이든. 둘 다여도 좋다."',
+  'story.runStart.sisyphus': '"바위는 굴러 떨어진다. 그래서 나는 다시 민다."',
+  'story.runStart.thanatos': '"모두가 결국 내게 온다. 순서를 조금 앞당길 뿐."',
+  'story.death.odysseus': '"…아직, 아직 이타케가 아니야."',
+  'story.death.achilles': '"발꿈치라니. 매번 이런 식이군."',
+  'story.death.sisyphus': '"괜찮다. 산 아래에서 다시 시작하면 된다."',
+  'story.death.thanatos': '"내가 나를 거두는 날도 오는군."',
+  'story.boon.zeus': '"내 번개를 빌려주마. 함부로 쓰지는 말고."',
+  'story.boon.poseidon': '"바다가 너를 미워하지만, 오늘만은 밀어주마."',
+  'story.boon.ares': '"피를 봐라. 그게 살아있다는 증거다."',
+  'story.boon.athena': '"머리를 써라, 오디세우스. 근육은 네 것이 아니다."',
+  'story.boon.aphrodite': '"적조차 너를 사랑하게 만들어 주지."',
+  'story.boon.hermes': '"빠르게. 언제나 빠르게. 나처럼."',
+  'story.boon.hades': '"어차피 내려올 거라면, 화려하게 오너라."',
+  'story.boon.gaia': '"딛고 선 땅이 너를 지킬 것이다."',
+  'story.milestone.5': '파도가 거칠어진다.',
+  'story.milestone.10': '수평선에 무언가 거대한 것이 보인다.',
+  'story.milestone.15': '신들이 내기를 걸기 시작했다.',
+  'story.milestone.20': '이 바다에 이렇게 오래 버틴 자는 없었다.',
+  'story.milestone.25': '이타케의 냄새가 난다. 착각일지도.',
+} as const;
+
+/**
+ * `as const` above gives us literal keys; widening the values to `string` here
+ * is what lets the other locales be checked for completeness without being
+ * forced to repeat the Korean text.
+ */
+export type DictKey = keyof typeof ko;
+export type Dict = { [K in DictKey]: string };

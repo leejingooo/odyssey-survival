@@ -1,0 +1,30 @@
+{
+  "name": "odyssey-survival",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Odyssey Survival - a mobile roguelite survivors game with Greek mythology narrative",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "cap:sync": "npm run build && cap sync",
+    "cap:android": "npm run cap:sync && cap open android",
+    "cap:ios": "npm run cap:sync && cap open ios",
+    "test:smoke": "node tests/smoke.mjs",
+    "test:soak": "node tests/soak.mjs",
+    "format": "prettier --write \"src/**/*.{ts,css}\" \"tests/*.mjs\" \"*.{ts,json,md}\""
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.2",
+    "@capacitor/cli": "^6.2.2",
+    "@capacitor/ios": "^6.2.2",
+    "playwright": "^1.56.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.2"
+  }
+}
