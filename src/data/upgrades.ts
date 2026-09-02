@@ -11,6 +11,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_damage',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '🗡️',
     rarity: 'common',
     maxLevel: 5,
     name: L('날카로움', 'Keen Edge', '鋭さ', '锋锐'),
@@ -28,6 +30,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_speed',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '💨',
     rarity: 'common',
     maxLevel: 5,
     name: L('신속한 손', 'Quick Hands', '素早い手', '疾手'),
@@ -40,6 +44,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_range',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '🏹',
     rarity: 'common',
     maxLevel: 4,
     name: L('먼 사냥', 'Far Hunt', '遠き狩り', '远猎'),
@@ -52,6 +58,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_size',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '⭕',
     rarity: 'common',
     maxLevel: 4,
     name: L('확대', 'Broadened', '拡大', '扩张'),
@@ -69,6 +77,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_count',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '🎯',
     rarity: 'epic',
     maxLevel: 3,
     name: L('다중 사격', 'Multishot', '多重射撃', '多重射击'),
@@ -86,6 +96,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_pierce',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '📌',
     rarity: 'rare',
     maxLevel: 3,
     name: L('관통', 'Piercing', '貫通', '贯穿'),
@@ -103,6 +115,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_homing',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '🧭',
     rarity: 'rare',
     maxLevel: 2,
     name: L('유도', 'Seeking', '誘導', '追踪'),
@@ -120,6 +134,8 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_crit',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '💢',
     rarity: 'rare',
     maxLevel: 4,
     name: L('급소 찌르기', 'Vital Strike', '急所突き', '致命一击'),
@@ -138,14 +154,16 @@ export const WEAPON_UPGRADES: CardDef[] = [
   {
     id: 'atk_infuse',
     kind: 'weapon',
+    effect: 'attack',
+    icon: '✨',
     rarity: 'legendary',
     maxLevel: 3,
     name: L('신의 각인', 'Divine Infusion', '神の刻印', '神之铭刻'),
     desc: L(
-      '기본 공격에 당신이 섬기는 신의 힘이 깃든다. (효과 {0}%)',
-      'Your basic attack carries the power of the gods you serve. ({0}% potency)',
-      '基本攻撃に、あなたが仕える神の力が宿る。（効果{0}%）',
-      '普通攻击附带你所侍奉神明的力量。（效果 {0}%）',
+      '기본 공격에 모시는 신의 힘이 실린다. 신마다 정해진 효과의 세기가 {0}%가 된다. 여러 신을 모셨다면 공격할 때마다 번갈아 실리고, 투사체 색이 그 신의 색으로 바뀐다.',
+      'Your basic attack carries the gods you serve, at {0}% of each god’s listed strength. With several gods it cycles attack by attack, and the shot takes that god’s colour.',
+      '基本攻撃に、仕える神の力が宿る。神ごとに定められた効果の強さが{0}%になる。複数の神に仕えていれば攻撃ごとに交代し、弾がその神の色に染まる。',
+      '普通攻击承载你所供奉的神明，强度为每位神明既定效果的 {0}%。供奉多位时逐次轮换，弹体也会染上该神的颜色。',
     ),
     values: (lv) => [at([50, 85, 130], lv)],
     apply: (o, lv) => {

@@ -1,6 +1,14 @@
 import type { SaveData } from '../core/storage';
-import type { CardDef } from '../data/cards';
-import { availableGods, GOD_IDS, GOD_INFUSION, godName, godTitle, GODS } from '../data/gods';
+import type { EffectKind } from '../data/cards';
+import {
+  availableGods,
+  GOD_IDS,
+  godName,
+  godTitle,
+  GODS,
+  nextGodToUnlock,
+  type GodId,
+} from '../data/gods';
 import { BOONS_BY_GOD } from '../data/boons';
 import {
   HEROES,
@@ -11,9 +19,16 @@ import {
   heroWeaponName,
   type HeroId,
 } from '../data/heroes';
-import { STAR_CHART, chartDesc, chartName, chartRank, nextCost } from '../data/starchart';
+import {
+  PERMANENT,
+  permanentDesc,
+  permanentName,
+  permanentRank,
+  nextCost,
+} from '../data/permanent';
 import { MONETIZATION_ENABLED, type Monetization, type Product } from '../game/monetization';
 import type { PendingChoice, Run } from '../game/run';
+import { cardById, type Offer } from '../game/loadout';
 import {
   formatTime,
   getLocale,
@@ -25,7 +40,7 @@ import {
   type LocaleId,
 } from '../i18n';
 import { button, clear, el } from './dom';
-import { cardIcon, godPip, heroPortrait } from './glyph';
+import { heroPortrait } from './glyph';
 
 export interface UiContext {
   save: SaveData;
@@ -41,7 +56,7 @@ export interface UiContext {
   resetProgress(): void;
 }
 
-export type ScreenName = 'title' | 'heroes' | 'chart' | 'pantheon' | 'shop' | 'settings';
+export type ScreenName = 'title' | 'heroes' | 'permanent' | 'pantheon' | 'shop' | 'settings';
 
 function goldChip(save: SaveData): HTMLElement {
   return el('div', { class: 'gold-chip' }, [
@@ -75,6 +90,15 @@ export function titleScreen(ctx: UiContext): HTMLElement {
     )}`,
   });
 
+  // A concrete next goal beats an abstract "spend gold somewhere" prompt.
+  const next = nextGodToUnlock(save);
+  const goal = next
+    ? el('p', {
+        class: 'goal',
+        text: `${next.emblem} ${t('menu.nextUnlock', godName(next.id), next.unlockCost)}`,
+      })
+    : null;
+
   return el('div', { class: 'screen screen--menu fade-in' }, [
     el('div', { class: 'topbar' }, [el('span'), el('span'), goldChip(save)]),
     el('div', { class: 'center-col' }, [
@@ -87,7 +111,7 @@ export function titleScreen(ctx: UiContext): HTMLElement {
       el('div', { class: 'stack', style: { width: '100%', maxWidth: '340px' } }, [
         button(t('ui.play'), () => ctx.go('heroes'), 'btn btn--primary btn--wide'),
         el('div', { class: 'btn-row' }, [
-          button(t('menu.chart'), () => ctx.go('chart')),
+          button(t('menu.permanent'), () => ctx.go('permanent')),
           button(t('menu.pantheon'), () => ctx.go('pantheon')),
         ]),
         el('div', { class: 'btn-row' }, [
@@ -98,6 +122,7 @@ export function titleScreen(ctx: UiContext): HTMLElement {
         ]),
       ]),
       stats,
+      goal,
     ]),
   ]);
 }
@@ -186,23 +211,23 @@ export function heroScreen(ctx: UiContext): HTMLElement {
   ]);
 }
 
-// ------------------------------------------------------------- star chart
+// ------------------------------------------------------------- permanent upgrades
 
-export function chartScreen(ctx: UiContext): HTMLElement {
+export function permanentScreen(ctx: UiContext): HTMLElement {
   const { save } = ctx;
   const list = el('div', { class: 'row-list' });
 
   const paint = () => {
     clear(list);
-    for (const def of STAR_CHART) {
-      const rank = chartRank(save, def.id);
+    for (const def of PERMANENT) {
+      const rank = permanentRank(save, def.id);
       const cost = nextCost(def, rank);
       const pips = el('div', { class: 'pips' });
       for (let i = 0; i < def.maxRank; i++) {
         pips.append(el('div', { class: `pip${i < rank ? ' is-on' : ''}` }));
       }
       const buy = button(
-        cost === null ? t('ui.maxed') : t('chart.cost', cost),
+        cost === null ? t('ui.maxed') : t('perm.cost', cost),
         () => {
           if (cost === null) return;
           if (save.gold < cost) {
@@ -210,7 +235,7 @@ export function chartScreen(ctx: UiContext): HTMLElement {
             return;
           }
           save.gold -= cost;
-          save.starChart[def.id] = rank + 1;
+          save.permanent[def.id] = rank + 1;
           ctx.commit();
           ctx.rerender();
         },
@@ -221,10 +246,10 @@ export function chartScreen(ctx: UiContext): HTMLElement {
       list.append(
         el('div', { class: 'row' }, [
           el('div', { class: 'row__head' }, [
-            el('div', { class: 'row__name', text: chartName(def.id) }),
+            el('div', { class: 'row__name', text: permanentName(def.id) }),
             pips,
           ]),
-          el('div', { class: 'row__desc', text: chartDesc(def, rank) }),
+          el('div', { class: 'row__desc', text: permanentDesc(def, rank) }),
           buy,
         ]),
       );
@@ -233,11 +258,11 @@ export function chartScreen(ctx: UiContext): HTMLElement {
   paint();
 
   return el('div', { class: 'screen screen--menu fade-in' }, [
-    topbar(ctx, t('chart.title'), () => ctx.go('title')),
+    topbar(ctx, t('perm.title'), () => ctx.go('title')),
     el('p', {
       class: 'hint',
       style: { textAlign: 'left', marginTop: '0' },
-      text: t('chart.subtitle'),
+      text: t('perm.subtitle'),
     }),
     el('div', { class: 'screen__scroll' }, [list]),
   ]);
@@ -260,8 +285,11 @@ export function pantheonScreen(ctx: UiContext): HTMLElement {
     for (const id of GOD_IDS) {
       const def = GODS[id];
       const unlocked = owned.has(id);
-      const sigil = godPip(id, 44);
-      sigil.className = 'god-row__sigil';
+      const sigil = el('div', {
+        class: 'god-row__sigil',
+        text: def.emblem,
+        style: { '--accent': def.color } as Record<string, string>,
+      });
 
       const action =
         def.unlockCost === 0
@@ -308,7 +336,7 @@ export function pantheonScreen(ctx: UiContext): HTMLElement {
           boons,
           el('div', { class: 'god-row__infusion' }, [
             el('span', { class: 'card__tag', text: t('pantheon.infusion') }),
-            document.createTextNode(' ' + loc(GOD_INFUSION[id])),
+            document.createTextNode(' ' + loc(def.infusion)),
           ]),
         ]),
       );
@@ -514,10 +542,72 @@ function localeLabel(id: LocaleId): string {
 
 // ------------------------------------------------------------- card picker
 
+function effectLabel(effect: EffectKind): string {
+  return t(`effect.${effect}` as DictKey);
+}
+
+/**
+ * One offer. The god's emblem and colour lead, the boon name is the biggest
+ * thing on the card, and rarity is carried by the frame rather than by a word
+ * the player has to stop and read.
+ */
+function offerCard(offer: Offer, run: Run, onPick: (offer: Offer) => void): HTMLElement {
+  const { card } = offer;
+  const level = (run.owned.get(card.id) ?? 0) + 1;
+  const god = card.god ? GODS[card.god] : null;
+  const accent = god ? god.color : card.kind === 'weapon' ? '#e8b64c' : '#b8d0a0';
+  const emblem = god ? god.emblem : (card.icon ?? '✦');
+
+  const source = god
+    ? godName(card.god as GodId)
+    : card.kind === 'weapon'
+      ? t('card.weapon')
+      : t('card.perk');
+
+  const node = el('button', {
+    class: `card card--${card.rarity}${offer.replaces ? ' card--swap' : ''}`,
+    type: 'button',
+    style: { '--accent': accent } as Record<string, string>,
+  });
+
+  const meta = el('div', { class: 'card__meta' }, [
+    el('span', { class: `chip chip--${card.rarity}`, text: t(`rarity.${card.rarity}` as DictKey) }),
+    el('span', { class: 'chip', text: effectLabel(card.effect) }),
+    el('span', {
+      class: 'chip chip--rank',
+      text: level === 1 ? t('card.newLevel') : t('card.upgradeTo', level),
+    }),
+    card.temporaryLevels
+      ? el('span', {
+          class: 'chip chip--temp',
+          text: t('card.temporary', card.temporaryLevels),
+        })
+      : null,
+  ]);
+
+  node.append(
+    el('div', { class: 'card__emblem', text: emblem }),
+    el('div', { class: 'card__body' }, [
+      el('div', { class: 'card__source', text: source }),
+      el('div', { class: 'card__name', text: loc(card.name) }),
+      meta,
+      el('div', { class: 'card__desc', text: loc(card.desc, ...card.values(level)) }),
+      offer.replaces
+        ? el('div', { class: 'card__swap' }, [
+            el('span', { class: 'chip chip--warn', text: t('card.swap') }),
+            document.createTextNode(' ' + t('card.swapDesc', godName(offer.replaces))),
+          ])
+        : null,
+    ]),
+  );
+  node.addEventListener('click', () => onPick(offer));
+  return node;
+}
+
 export function cardScreen(
   choice: PendingChoice,
   run: Run,
-  onPick: (card: CardDef) => void,
+  onPick: (offer: Offer) => void,
 ): HTMLElement {
   const heading =
     choice.source === 'levelup'
@@ -525,55 +615,32 @@ export function cardScreen(
       : { title: t('chest.opened'), sub: t('chest.pick') };
 
   const list = el('div', { class: 'card-list' });
-  for (const card of choice.offers) {
-    const level = (run.owned.get(card.id) ?? 0) + 1;
-    const node = el('button', { class: `card card--${card.rarity}`, type: 'button' }, [
-      cardIcon(card, 46),
-    ]);
-    const icon = node.firstElementChild as HTMLElement | null;
-    if (icon) icon.className = 'card__icon';
+  for (const offer of choice.offers) list.append(offerCard(offer, run, onPick));
 
-    const tagText = card.god
-      ? godName(card.god)
-      : card.kind === 'weapon'
-        ? t('card.weapon')
-        : t('card.perk');
-
-    node.append(
-      el('div', { class: 'card__body' }, [
-        el('div', { class: 'card__name' }, [
-          document.createTextNode(loc(card.name)),
-          el('span', {
-            class: 'card__tag',
-            style: card.god
-              ? { color: GODS[card.god].color, borderColor: GODS[card.god].color }
-              : {},
-            text: tagText,
+  // A new player has no way to know why only one god ever shows up, so the
+  // rule is stated exactly where they run into it.
+  const godsHeld = run.godsHeld.size;
+  const showsSwap = choice.offers.some((offer) => offer.replaces);
+  const slotNote =
+    choice.source === 'chest' && (showsSwap || godsHeld >= run.maxGods)
+      ? el('div', { class: 'slot-note' }, [
+          el('div', { class: 'slot-note__title' }, [
+            el('span', { text: '🏺 ' }),
+            document.createTextNode(`${t('slots.title')}  ${godsHeld}/${run.maxGods}`),
+          ]),
+          el('p', {
+            class: 'slot-note__body',
+            text: showsSwap ? t('slots.full') : t('slots.hint', run.maxGods),
           }),
-        ]),
-        el('div', { class: 'card__desc', text: loc(card.desc, ...card.values(level)) }),
-        el('div', {
-          class: 'card__level',
-          text: level === 1 ? t('card.newLevel') : t('card.upgradeTo', level),
-        }),
-      ]),
-    );
-    node.addEventListener('click', () => onPick(card));
-    list.append(node);
-  }
-
-  const godsHeld = run.godsHeld;
-  const capNote =
-    godsHeld.size >= run.maxGods
-      ? el('p', { class: 'hint', text: t('card.blocked', run.maxGods) })
+        ])
       : null;
 
   return el('div', { class: 'screen screen--overlay fade-in' }, [
     el('div', { class: 'center-col' }, [
-      el('h2', { class: 'title', style: { fontSize: '26px' }, text: heading.title }),
+      el('h2', { class: 'card-heading', text: heading.title }),
       el('p', { class: 'subtitle', text: heading.sub }),
       list,
-      capNote,
+      slotNote,
     ]),
   ]);
 }
@@ -657,6 +724,35 @@ export interface ResultData {
   onTitle: () => void;
 }
 
+/** The cards you finished the run holding — the part players screenshot. */
+function buildSummary(run: Run): HTMLElement | null {
+  const rows: HTMLElement[] = [];
+  for (const [id, level] of run.owned) {
+    const card = cardById(id);
+    if (!card || level <= 0) continue;
+    const god = card.god ? GODS[card.god] : null;
+    rows.push(
+      el(
+        'div',
+        {
+          class: 'build-item',
+          style: god ? ({ '--accent': god.color } as Record<string, string>) : {},
+        },
+        [
+          el('span', { class: 'build-item__icon', text: god ? god.emblem : (card.icon ?? '✦') }),
+          el('span', { class: 'build-item__name', text: loc(card.name) }),
+          el('span', { class: 'build-item__rank', text: String(level) }),
+        ],
+      ),
+    );
+  }
+  if (rows.length === 0) return null;
+  return el('div', { class: 'build' }, [
+    el('div', { class: 'build__title', text: t('result.build') }),
+    el('div', { class: 'build__grid' }, rows),
+  ]);
+}
+
 export function resultScreen(data: ResultData): HTMLElement {
   const { run } = data;
   const cell = (label: string, value: string) =>
@@ -685,12 +781,13 @@ export function resultScreen(data: ResultData): HTMLElement {
     el('div', { class: 'center-col' }, [
       el('h2', { class: 'title', style: { fontSize: '34px' }, text: t('result.defeat') }),
       data.isRecord ? el('p', { class: 'subtitle pulse', text: t('result.newRecord') }) : null,
-      el('div', { class: 'result-grid', style: { width: '100%', maxWidth: '340px' } }, [
+      el('div', { class: 'result-grid', style: { width: '100%', maxWidth: '360px' } }, [
         cell(t('result.survived'), formatTime(run.time)),
         cell(t('result.levelReached'), String(run.level)),
         cell(t('ui.kills'), String(run.kills)),
         cell(t('result.goldEarned'), `◆ ${data.goldEarned}`),
       ]),
+      buildSummary(run),
       actions,
     ]),
   ]);

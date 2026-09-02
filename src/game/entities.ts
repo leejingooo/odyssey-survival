@@ -22,6 +22,15 @@ export interface StatusState {
   frozenKind: 'ice' | 'vine';
   /** shatter damage owed when the freeze expires, from Demeter */
   shatterDamage: number;
+  /** fire damage over time; stacks alongside bleed rather than replacing it */
+  burnDps: number;
+  burnTime: number;
+  /** Hera's mark: extra damage taken from every source */
+  markAmount: number;
+  markTime: number;
+  /** drunk on Dionysus' infusion — walks off in `confuseDir` instead of at you */
+  confuseTime: number;
+  confuseDir: number;
 }
 
 export function emptyStatus(): StatusState {
@@ -38,6 +47,12 @@ export function emptyStatus(): StatusState {
     frozenTime: 0,
     frozenKind: 'ice',
     shatterDamage: 0,
+    burnDps: 0,
+    burnTime: 0,
+    markAmount: 0,
+    markTime: 0,
+    confuseTime: 0,
+    confuseDir: 0,
   };
 }
 
@@ -73,7 +88,7 @@ export interface Enemy {
   isBoss: boolean;
 }
 
-export type ProjectileKind = 'arrow' | 'boulder' | 'scythe' | 'enemy';
+export type ProjectileKind = 'arrow' | 'boulder' | 'scythe' | 'automaton' | 'enemy';
 
 export interface Projectile {
   id: number;
@@ -132,6 +147,8 @@ export interface Chest {
 
 export interface Puddle {
   id: number;
+  /** water slows and grinds; embers only burn */
+  kind: 'water' | 'ember';
   x: number;
   y: number;
   radius: number;
@@ -150,6 +167,7 @@ export type VfxKind =
   | 'thorn'
   | 'text'
   | 'spark'
+  | 'beam'
   | 'shield';
 
 export interface Vfx {
@@ -200,4 +218,13 @@ export interface PlayerState {
   infusedGods: GodId[];
   /** the god carried by the shot being fired right now, for colour and effect */
   currentInfusion: GodId | null;
+  /** seconds the hero has been standing still, for Hestia's hearth */
+  stillTime: number;
+  /** seconds since the hero last took damage, for Hestia's warmth */
+  noHitTime: number;
+  /** Gaia's infusion: bonus armour that lingers for a moment after each hit */
+  gaiaArmorTime: number;
+  /** Hestia's Everlasting Flame, once per voyage */
+  flameUsed: boolean;
+  beamCd: number;
 }

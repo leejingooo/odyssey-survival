@@ -5,7 +5,7 @@ import { BOONS } from '../data/boons';
 import { rarityWeight, type CardDef } from '../data/cards';
 import type { GodId } from '../data/gods';
 import type { HeroDef } from '../data/heroes';
-import { applyStarChart } from '../data/starchart';
+import { applyPermanent } from '../data/permanent';
 import { PERKS } from '../data/perks';
 import { WEAPON_UPGRADES } from '../data/upgrades';
 import { baseMechanics, baseStats, type Loadout } from './stats';
@@ -17,6 +17,8 @@ import { baseMechanics, baseStats, type Loadout } from './stats';
 export const BOUNTY_CARD: CardDef = {
   id: 'fallback_bounty',
   kind: 'perk',
+  effect: 'passive',
+  icon: '🧺',
   rarity: 'common',
   maxLevel: 999,
   name: L('항해자의 보급', "Voyager's Ration", '航海者の糧', '航海者补给'),
@@ -56,7 +58,7 @@ export function ownedGods(owned: ReadonlyMap<string, number>): Set<GodId> {
 }
 
 /**
- * Rebuild the entire loadout from scratch: hero base -> star chart -> every owned
+ * Rebuild the entire loadout from scratch: hero base -> permanent upgrades -> every owned
  * card at its current level. Cards are therefore idempotent and re-orderable,
  * which is what makes `apply` safe to write as "the full effect at level N".
  */
@@ -69,12 +71,28 @@ export function buildLoadout(
     stats: { ...baseStats(), ...hero.stats },
     mech: { ...baseMechanics(), ...hero.mech },
   };
-  applyStarChart(out, save);
+  applyPermanent(out, save);
   for (const [id, level] of owned) {
     if (level <= 0) continue;
     ALL_CARDS.get(id)?.apply(out, level);
   }
+  // Hera's vows read the finished build, so they are settled last — otherwise
+  // the bonus would depend on the order cards happened to be taken in.
+  const godCount = ownedGods(owned).size;
+  if (out.mech.allianceBonus > 0 && godCount > 0) {
+    out.stats.damageMult *= 1 + out.mech.allianceBonus * godCount;
+    out.stats.maxHp += out.mech.allianceHealth * godCount;
+  }
   return out;
+}
+
+/**
+ * One choice on the card screen. `replaces` is set when the vessel is already
+ * full: taking this boon means giving that god up, and the card says so.
+ */
+export interface Offer {
+  card: CardDef;
+  replaces?: GodId;
 }
 
 export interface DrawOptions {
@@ -82,30 +100,54 @@ export interface DrawOptions {
   pool: readonly CardDef[];
   owned: ReadonlyMap<string, number>;
   luck: number;
-  /** how many different gods this voyage may serve (Star Chart) */
+  /** how many different gods this voyage may serve (permanent upgrades) */
   maxGods: number;
   /** gods bought in the Pantheon; boons from anyone else never appear */
   availableGods: ReadonlySet<GodId>;
   count?: number;
 }
 
+/** The god you are least invested in — the one a swap gives up. */
+function leastInvestedGod(owned: ReadonlyMap<string, number>): GodId | undefined {
+  const ranks = new Map<GodId, number>();
+  for (const [id, level] of owned) {
+    const god = cardById(id)?.god;
+    if (!god || level <= 0) continue;
+    ranks.set(god, (ranks.get(god) ?? 0) + level);
+  }
+  let worst: GodId | undefined;
+  let worstRanks = Infinity;
+  for (const [god, total] of ranks) {
+    if (total < worstRanks) {
+      worstRanks = total;
+      worst = god;
+    }
+  }
+  return worst;
+}
+
 /**
- * Draw distinct offers. Boons from a new god are filtered out once the vessel
- * is full, and deepening a boon you already hold is weighted up a little so
- * builds converge instead of sprawling.
+ * Draw distinct offers. Deepening a boon you already hold is weighted up a
+ * little so builds converge instead of sprawling. Once the vessel is full a
+ * new god can still show up, but only as a swap — the alternative was showing
+ * the same three cards for the rest of the voyage.
  */
-export function drawOffers(opts: DrawOptions): CardDef[] {
+export function drawOffers(opts: DrawOptions): Offer[] {
   const { rng, pool, owned, luck, maxGods, availableGods } = opts;
   const count = opts.count ?? 3;
   const gods = ownedGods(owned);
   const hasAnyBoon = gods.size > 0;
+  const full = gods.size >= maxGods;
+  const swapTarget = full ? leastInvestedGod(owned) : undefined;
 
   const candidates = pool.filter((card) => {
     const level = owned.get(card.id) ?? 0;
     if (level >= card.maxLevel) return false;
     if (card.god) {
       if (!availableGods.has(card.god)) return false;
-      if (!gods.has(card.god) && gods.size >= maxGods) return false;
+      // A god you already serve is always fair game. A new one is normal while
+      // the vessel has room, and only offerable as a swap once it is full.
+      if (!gods.has(card.god) && full && !swapTarget) return false;
     }
     // Divine Infusion needs a god to infuse.
     if (card.id === 'atk_infuse' && !hasAnyBoon) return false;
@@ -115,11 +157,17 @@ export function drawOffers(opts: DrawOptions): CardDef[] {
   const picks = rng.sampleWeighted(candidates, count, (card) => {
     let weight = rarityWeight(card.rarity, luck);
     if ((owned.get(card.id) ?? 0) > 0) weight *= 1.3;
+    // Swaps are a real cost, so they stay a minority of what you see.
+    if (card.god && !gods.has(card.god)) weight *= 0.35;
     return weight;
   });
 
+  const offers: Offer[] = picks.map((card) =>
+    card.god && !gods.has(card.god) && swapTarget ? { card, replaces: swapTarget } : { card },
+  );
+
   // Rather than padding with duplicates, show fewer cards; the bounty only
   // appears when literally nothing else can be offered.
-  if (picks.length === 0) picks.push(BOUNTY_CARD);
-  return picks;
+  if (offers.length === 0) offers.push({ card: BOUNTY_CARD });
+  return offers;
 }

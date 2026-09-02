@@ -3,7 +3,7 @@ import { DragInput } from './core/input';
 import { GameLoop } from './core/loop';
 import { Renderer } from './core/renderer';
 import { clearSave, loadSave, writeSave, type SaveData } from './core/storage';
-import type { CardDef } from './data/cards';
+import type { Offer } from './game/loadout';
 import { godQuote } from './data/gods';
 import { HEROES, type HeroId } from './data/heroes';
 import {
@@ -15,14 +15,14 @@ import {
 import { drawRun } from './game/render';
 import { Run, type PendingChoice } from './game/run';
 import { onLocaleChange, setLocale, t } from './i18n';
-import { clear, showToast } from './ui/dom';
+import { clear, el, showToast } from './ui/dom';
 import { Hud } from './ui/hud';
 import {
   cardScreen,
   deathScreen,
   heroScreen,
   heroUnlocked,
-  chartScreen,
+  permanentScreen,
   pantheonScreen,
   pauseScreen,
   resultScreen,
@@ -207,6 +207,9 @@ export class App {
       level: run.level,
       kills: run.kills,
       gold: run.gold,
+      x: Math.round(run.player.x),
+      y: Math.round(run.player.y),
+      facing: Math.round((run.player.facing * 180) / Math.PI),
       hp: Math.round(run.player.hp),
       maxHp: Math.round(run.player.maxHp),
       enemies: run.enemies.length,
@@ -250,6 +253,16 @@ export class App {
     showToast(this.ui, message);
   }
 
+  /** Boss arrivals deserve more than a toast sliding past the corner. */
+  private showBanner(name: string): void {
+    const node = el('div', { class: 'banner' }, [
+      el('div', { class: 'banner__label', text: 'BOSS' }),
+      el('div', { class: 'banner__name', text: name }),
+    ]);
+    this.ui.append(node);
+    setTimeout(() => node.remove(), 2400);
+  }
+
   private get ctx(): UiContext {
     return {
       save: this.save,
@@ -287,8 +300,8 @@ export class App {
       switch (screen) {
         case 'heroes':
           return heroScreen(this.ctx);
-        case 'chart':
-          return chartScreen(this.ctx);
+        case 'permanent':
+          return permanentScreen(this.ctx);
         case 'pantheon':
           return pantheonScreen(this.ctx);
         case 'shop':
@@ -340,10 +353,14 @@ export class App {
         onChoice: (choice) => this.showChoice(choice),
         onLevelUp: () => this.vibrate(12),
         onBoss: (name) => {
-          this.toast(name);
+          this.showBanner(name);
           this.vibrate(40);
         },
         onNarrative: (text) => this.toast(text),
+        onFlame: () => {
+          this.toast(t('story.flame'));
+          this.vibrate(60);
+        },
         onDeath: () => this.showDeath(),
       },
     });
@@ -356,21 +373,25 @@ export class App {
 
   private showChoice(choice: PendingChoice): void {
     this.input.setEnabled(false);
+    this.hud.root.style.visibility = 'hidden';
     this.vibrate(10);
     const run = this.run;
     if (!run) return;
-    this.showOverlay(cardScreen(choice, run, (card) => this.pickCard(card)));
+    this.showOverlay(cardScreen(choice, run, (offer) => this.pickCard(offer)));
   }
 
-  private pickCard(card: CardDef): void {
+  private pickCard(offer: Offer): void {
     const run = this.run;
     if (!run) return;
     this.clearOverlay();
-    run.take(card);
+    run.take(offer);
     // The god who just blessed you gets the last word.
-    if (card.god) this.toast(godQuote(card.god));
+    if (offer.card.god) this.toast(godQuote(offer.card.god));
     // `take` may present the next queued choice synchronously.
-    if (!this.overlay) this.input.setEnabled(true);
+    if (!this.overlay) {
+      this.hud.root.style.visibility = '';
+      this.input.setEnabled(true);
+    }
   }
 
   private pauseRun(): void {

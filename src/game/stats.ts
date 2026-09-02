@@ -31,12 +31,15 @@ export interface Stats {
   lifesteal: number;
 }
 
+/** The move speed every hero is measured against; Hermes' epic reads from it. */
+export const BASE_MOVE_SPEED = 118;
+
 export function baseStats(): Stats {
   return {
     maxHp: 100,
     regen: 0,
     armor: 0,
-    moveSpeed: 118,
+    moveSpeed: BASE_MOVE_SPEED,
     damageMult: 1,
     attackSpeedMult: 1,
     rangeMult: 1,
@@ -129,7 +132,43 @@ export interface Mechanics {
   snareDuration: number;
   /** damage bonus that scales with *remaining* health, the mirror of Ares */
   zealBonus: number;
+  // Apollo / Hephaestus / Hestia — fire
+  burnDps: number;
+  burnDuration: number;
+  /** Apollo: a piercing beam of sunlight, every N seconds */
+  beamInterval: number;
+  beamDamage: number;
+  /** Apollo: fraction of max health restored on each level-up */
+  levelHeal: number;
+  // Hera — command
+  markChance: number;
+  /** extra damage a marked enemy takes from every source */
+  markAmount: number;
+  markDuration: number;
+  /** aura that saps the damage and speed of everything near you */
+  auraRadius: number;
+  auraWeaken: number;
+  /** every stat rises a little for each god you serve */
+  allianceBonus: number;
+  allianceHealth: number;
+  /** Hermes: turns surplus move speed into damage */
+  speedToDamage: number;
+  // Hephaestus — the forge
+  /** bronze constructs that circle you and grind down what they touch */
+  automatons: number;
+  automatonDamage: number;
+  // Hestia — the hearth
+  /** damage and regen gained while you hold still */
+  hearthDamage: number;
+  hearthRegen: number;
+  /** Hestia: fraction of max health regenerated per second once out of combat */
+  warmthPercent: number;
+  /** survive one killing blow per voyage, healing to this fraction */
+  everlastingFlame: number;
+  flameInvuln: number;
   // hero innate / weapon upgrades
+  /** multiplies the basic attack only, never god abilities */
+  basicDamageMult: number;
   reapThreshold: number;
   infusionPower: number;
 }
@@ -188,6 +227,27 @@ export function baseMechanics(): Mechanics {
     snareChance: 0,
     snareDuration: 0,
     zealBonus: 0,
+    burnDps: 0,
+    burnDuration: 0,
+    beamInterval: 0,
+    beamDamage: 0,
+    levelHeal: 0,
+    markChance: 0,
+    markAmount: 0,
+    markDuration: 0,
+    auraRadius: 0,
+    auraWeaken: 0,
+    allianceBonus: 0,
+    allianceHealth: 0,
+    speedToDamage: 0,
+    automatons: 0,
+    automatonDamage: 0,
+    hearthDamage: 0,
+    hearthRegen: 0,
+    warmthPercent: 0,
+    everlastingFlame: 0,
+    flameInvuln: 0,
+    basicDamageMult: 1,
     reapThreshold: 0,
     infusionPower: 0,
   };

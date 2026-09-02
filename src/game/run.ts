@@ -18,7 +18,7 @@ import {
 } from '../data/enemies';
 import { availableGods, GODS, type GodId } from '../data/gods';
 import type { HeroDef } from '../data/heroes';
-import { chestRateMult, maxBoonGods, startingLevel, startingRevives } from '../data/starchart';
+import { chestRateMult, maxBoonGods, startingLevel, startingRevives } from '../data/permanent';
 import { t } from '../i18n';
 import {
   emptyStatus,
@@ -36,18 +36,20 @@ import {
   CHEST_POOL,
   LEVEL_POOL,
   buildLoadout,
+  cardById,
   drawOffers,
   ownedGods,
+  type Offer,
 } from './loadout';
 import { SpatialHash } from './spatial';
-import type { Loadout } from './stats';
+import { BASE_MOVE_SPEED, type Loadout } from './stats';
 
 export type RunPhase = 'playing' | 'choosing' | 'paused' | 'dead' | 'finished';
 export type ChoiceSource = 'chest' | 'levelup';
 
 export interface PendingChoice {
   source: ChoiceSource;
-  offers: CardDef[];
+  offers: Offer[];
   /** level reached, for the level-up header */
   level: number;
 }
@@ -57,10 +59,18 @@ export interface RunEvents {
   onLevelUp(level: number): void;
   onBoss(name: string): void;
   onDeath(): void;
+  /** Hestia caught you: worth a line, because it looks like a death otherwise */
+  onFlame(): void;
   onNarrative(text: string): void;
 }
 
-const MAX_ENEMIES = 420;
+// Past this the screen stops reading as a crowd and starts reading as a wall,
+// which is unfair rather than hard.
+const MAX_ENEMIES = 330;
+/** How long the hero must hold still before Hestia's hearth catches. */
+const HEARTH_DELAY = 0.8;
+/** Seconds out of combat before Hestia's warmth starts closing wounds. */
+const WARMTH_DELAY = 3;
 /** Half-angle of the aim-assist cone, and how far it looks. */
 const AIM_ASSIST = 0.28;
 const AIM_ASSIST_RANGE = 340;
@@ -97,6 +107,10 @@ export class Run {
 
   /** Choices stack up if a chest breaks during a level-up. */
   private queue: PendingChoice[] = [];
+  /** card id -> the level at which it wears off */
+  private expiries = new Map<string, number>();
+  /** seconds of frozen simulation owed for impact feedback */
+  private hitStop = 0;
   private grid = new SpatialHash(56);
   private scratch: Enemy[] = [];
   private spawnBudget = 0;
@@ -152,6 +166,11 @@ export class Run {
       infusionIndex: 0,
       infusedGods: [],
       currentInfusion: null,
+      stillTime: 0,
+      noHitTime: 0,
+      gaiaArmorTime: 0,
+      flameUsed: false,
+      beamCd: 0,
     };
     this.renderer.camera.x = 0;
     this.renderer.camera.y = 0;
@@ -180,14 +199,19 @@ export class Run {
   }
 
   /**
-   * Effective damage multiplier. Ares pays out as your health drains, Dionysus
-   * pays out while it is full — a build can chase either, rarely both.
+   * Everything that scales damage globally. Ares pays out as your health
+   * drains and Dionysus while it is full, so a build chases one or the other;
+   * Hermes turns surplus move speed into force, and Hestia rewards standing
+   * your ground.
    */
   private damageMult(): number {
     const fraction = this.player.hp / Math.max(1, this.player.maxHp);
     const wrath = this.mech.wrathBonus * (1 - fraction);
     const zeal = this.mech.zealBonus * fraction;
-    return this.stats.damageMult * (1 + wrath + zeal);
+    const surplus = Math.max(0, this.stats.moveSpeed / BASE_MOVE_SPEED - 1);
+    const sprint = this.mech.speedToDamage * surplus;
+    const hearth = this.player.stillTime >= HEARTH_DELAY ? this.mech.hearthDamage : 0;
+    return this.stats.damageMult * (1 + wrath + zeal + sprint + hearth);
   }
 
   private rebuildLoadout(): void {
@@ -201,18 +225,20 @@ export class Run {
     this.syncOrbiters();
   }
 
-  /** Thanatos turns extra "projectiles" into orbiting scythes. */
+  /**
+   * Two things circle the hero: Thanatos turns extra "projectiles" into
+   * scythes, and Hephaestus' automatons serve any hero. They share one system
+   * because they behave identically — only their damage and colour differ.
+   */
   private syncOrbiters(): void {
-    if (this.hero.weapon !== 'aura') {
-      this.orbiters.length = 0;
-      return;
-    }
-    const want = this.stats.projectiles;
+    const scythes = this.hero.weapon === 'aura' ? this.stats.projectiles : 0;
+    const want = scythes + this.mech.automatons;
     while (this.orbiters.length > want) this.orbiters.pop();
     while (this.orbiters.length < want) {
+      const isScythe = this.orbiters.length < scythes;
       this.orbiters.push({
         id: newId(),
-        kind: 'scythe',
+        kind: isScythe ? 'scythe' : 'automaton',
         hostile: false,
         x: this.player.x,
         y: this.player.y,
@@ -228,11 +254,11 @@ export class Run {
         hit: new Set(),
         splashRadius: 0,
         splashDamage: 0,
-        color: this.hero.accent,
+        color: isScythe ? this.hero.accent : GODS.hephaestus.accent,
         empowered: false,
         infusion: null,
         orbitAngle: (TAU * this.orbiters.length) / Math.max(1, want),
-        orbitRadius: 74,
+        orbitRadius: isScythe ? 74 : 58,
       });
     }
     const count = this.orbiters.length;
@@ -245,6 +271,12 @@ export class Run {
 
   step(dt: number): void {
     if (this.phase !== 'playing') return;
+    // Hit-stop: a couple of frozen frames make a heavy hit land. Kept short
+    // enough that it reads as impact rather than as a stutter.
+    if (this.hitStop > 0) {
+      this.hitStop = Math.max(0, this.hitStop - dt);
+      return;
+    }
     this.time += dt;
     this.damageTextCd -= dt;
 
@@ -285,13 +317,22 @@ export class Run {
     // The hero attacks the way it travels; standing still keeps the last heading.
     if (ix !== 0 || iy !== 0) p.facing = Math.atan2(iy, ix);
 
+    const moving = ix !== 0 || iy !== 0;
+    p.stillTime = moving ? 0 : p.stillTime + dt;
+    p.noHitTime += dt;
+    p.gaiaArmorTime = Math.max(0, p.gaiaArmorTime - dt);
     p.walkPhase += Math.hypot(ix, iy) * dt * 9;
     p.invuln = Math.max(0, p.invuln - dt);
     p.hurtFlash = Math.max(0, p.hurtFlash - dt * 3);
     p.slaughterTime = Math.max(0, p.slaughterTime - dt);
 
-    if (this.stats.regen > 0 && p.hp < p.maxHp) {
-      p.hp = Math.min(p.maxHp, p.hp + this.stats.regen * dt);
+    let regen = this.stats.regen;
+    if (p.stillTime >= HEARTH_DELAY) regen += this.mech.hearthRegen;
+    if (this.mech.warmthPercent > 0 && p.noHitTime >= WARMTH_DELAY) {
+      regen += p.maxHp * this.mech.warmthPercent;
+    }
+    if (regen > 0 && p.hp < p.maxHp) {
+      p.hp = Math.min(p.maxHp, p.hp + regen * dt);
     }
 
     const haste = 1 + (p.slaughterTime > 0 ? this.mech.slaughterHaste : 0);
@@ -334,13 +375,76 @@ export class Run {
         this.castThorns();
       }
     }
+
+    if (this.mech.beamDamage > 0) {
+      p.beamCd -= dt;
+      if (p.beamCd <= 0) {
+        p.beamCd = this.mech.beamInterval * cdMult;
+        this.castBeam();
+      }
+    }
+
+    // Hera's presence saps whatever wanders too close to the queen.
+    if (this.mech.auraRadius > 0) {
+      for (const enemy of this.grid.query(p.x, p.y, this.mech.auraRadius, this.scratch)) {
+        if (enemy.dead) continue;
+        enemy.status.weaken = Math.max(enemy.status.weaken, this.mech.auraWeaken);
+        enemy.status.weakenTime = Math.max(enemy.status.weakenTime, 0.25);
+      }
+    }
+  }
+
+  /** Apollo's oracle: a line of sunlight through everything in front of you. */
+  private castBeam(): void {
+    const p = this.player;
+    const length = 520 * this.stats.rangeMult;
+    const halfWidth = 22 * this.stats.sizeMult;
+    const angle = this.aimAngle();
+    const ex = p.x + Math.cos(angle) * length;
+    const ey = p.y + Math.sin(angle) * length;
+    this.spawnVfx('beam', p.x, p.y, {
+      x2: ex,
+      y2: ey,
+      life: 0.32,
+      radius: halfWidth,
+      angle,
+      color: GODS.apollo.accent,
+    });
+    audio.play('shoot');
+
+    const damage = this.mech.beamDamage * this.damageMult();
+    const midX = (p.x + ex) / 2;
+    const midY = (p.y + ey) / 2;
+    for (const enemy of this.grid.query(midX, midY, length / 2 + 60, this.scratch)) {
+      if (enemy.dead) continue;
+      // Distance from the enemy to the beam's centre line, in beam space.
+      const rx = enemy.x - p.x;
+      const ry = enemy.y - p.y;
+      const along = rx * Math.cos(angle) + ry * Math.sin(angle);
+      if (along < 0 || along > length) continue;
+      const across = Math.abs(-rx * Math.sin(angle) + ry * Math.cos(angle));
+      if (across > halfWidth + enemy.radius) continue;
+      this.hitEnemy(enemy, damage, { onHit: false });
+    }
   }
 
   // ----------------------------------------------------------- basic attack
 
-  private attack(): void {
+  /**
+   * Which god rides this particular shot. A multi-god build cycles through its
+   * pantheon attack by attack, so the colour of the projectile tells you what
+   * is about to happen when it lands.
+   */
+  private pickInfusion(): GodId | null {
+    const gods = this.player.infusedGods;
+    if (this.mech.infusionPower <= 0 || gods.length === 0) return null;
+    return gods[this.player.attackCounter % gods.length];
+  }
+
+  private attack(repeat = false): void {
     const p = this.player;
     p.attackCounter++;
+    if (!repeat) p.currentInfusion = this.pickInfusion();
     const empowered = this.mech.tridentEvery > 0 && p.attackCounter % this.mech.tridentEvery === 0;
 
     switch (this.hero.weapon) {
@@ -362,6 +466,12 @@ export class Run {
         break;
     }
     this.fireMoonshafts();
+
+    // Hermes' infusion is a second swing, not a cooldown trick: the basic
+    // attack simply happens again.
+    if (p.currentInfusion === 'hermes' && !repeat) {
+      if (this.rng.chance(0.3 * this.mech.infusionPower)) this.attack(true);
+    }
   }
 
   /** Artemis' extra arrows: weak, but they always find something. */
@@ -399,8 +509,9 @@ export class Run {
     }
   }
 
+  /** Basic-attack damage: global scaling, then the weapon-only multiplier. */
   private attackDamage(empowered: boolean): number {
-    const base = this.hero.weaponBase.damage * this.damageMult();
+    const base = this.hero.weaponBase.damage * this.damageMult() * this.mech.basicDamageMult;
     return empowered ? base * this.mech.tridentMult : base;
   }
 
@@ -437,6 +548,11 @@ export class Run {
     const life = (wb.range * this.stats.rangeMult) / speed;
     const spread = count > 1 ? 0.16 : 0;
     const infusionColor = p.currentInfusion ? GODS[p.currentInfusion].accent : null;
+    // Artemis' infusion makes the shot hunt on its own.
+    const homing =
+      p.currentInfusion === 'artemis'
+        ? Math.max(this.stats.homing, 0.55 * this.mech.infusionPower)
+        : this.stats.homing;
 
     const aim = this.aimAngle();
     for (let i = 0; i < count; i++) {
@@ -456,7 +572,7 @@ export class Run {
         damage,
         life,
         pierceLeft: empowered ? Infinity : wb.pierce + this.stats.pierce,
-        homing: this.stats.homing,
+        homing,
         hit: new Set(),
         splashRadius: this.mech.splashRadius,
         splashDamage: this.mech.splashDamage,
@@ -661,77 +777,115 @@ export class Run {
   }
 
   /**
-   * Divine Infusion. Each god rewrites the basic attack in its own idiom, and
-   * the shot is already tinted that god's colour by the time it lands, so the
-   * effect never arrives unannounced.
+   * Divine Infusion. Each god rewrites the basic attack along an axis its own
+   * boons do not already cover — Ares executes rather than bleeds, Hades taxes
+   * big health pools rather than branding, Hermes swings twice rather than
+   * playing with cooldowns. `infusionPower` scales every number below.
+   *
+   * Hermes and Artemis are handled where the shot is fired, not here.
    */
   private applyInfusion(enemy: Enemy, baseDamage: number, god: GodId): void {
     const power = this.mech.infusionPower;
     if (power <= 0) return;
     switch (god) {
       case 'zeus': {
-        // Radiating discharge rather than the boon's chain: a different shape
-        // of the same idea, so running both feels like two tools.
+        // Radiating discharge, as opposed to the boon's chain that leaps sideways.
         const radius = 66 + 34 * power;
-        this.spawnVfx('ring', enemy.x, enemy.y, {
-          radius,
-          life: 0.22,
-          color: GODS.zeus.accent,
-        });
+        this.spawnVfx('ring', enemy.x, enemy.y, { radius, life: 0.22, color: GODS.zeus.accent });
         this.areaDamage(enemy.x, enemy.y, radius, baseDamage * 0.45 * power, false);
         break;
       }
-      case 'poseidon': {
-        const radius = 62;
-        this.spawnVfx('ring', enemy.x, enemy.y, {
-          radius,
-          life: 0.2,
-          color: GODS.poseidon.accent,
-        });
-        for (const other of this.grid.query(enemy.x, enemy.y, radius, this.scratch)) {
-          if (!other.dead) this.knockback(other, 24 * power, enemy.x, enemy.y);
-        }
-        this.areaDamage(enemy.x, enemy.y, radius, baseDamage * 0.3 * power, false);
+      case 'hera': {
+        // The queen's presence, not her brand: a straight sap of what it can do.
+        enemy.status.weaken = Math.max(enemy.status.weaken, 0.3 * power);
+        enemy.status.weakenTime = Math.max(enemy.status.weakenTime, 2.5);
         break;
       }
-      case 'ares':
-        enemy.status.bleedDps = Math.max(enemy.status.bleedDps, 8 * power * this.damageMult());
-        enemy.status.bleedTime = Math.max(enemy.status.bleedTime, 3);
+      case 'poseidon': {
+        this.knockback(enemy, 26 * power);
+        enemy.status.slow = Math.max(enemy.status.slow, 0.35 * power);
+        enemy.status.slowTime = Math.max(enemy.status.slowTime, 2);
+        break;
+      }
+      case 'demeter':
+        this.freezeEnemy(enemy, this.mech.freezeDuration || 1.0, 'ice');
         break;
       case 'athena':
+        // A second strike that ignores armour; armour is an enemy-side notion
+        // here, so it simply lands again without re-triggering on-hit effects.
         this.hitEnemy(enemy, baseDamage * 0.4 * power, { onHit: false });
         break;
-      case 'aphrodite':
-        enemy.status.weaken = Math.max(enemy.status.weaken, 0.2 * power);
-        enemy.status.weakenTime = Math.max(enemy.status.weakenTime, 3);
+      case 'apollo':
+        enemy.status.burnDps = Math.max(enemy.status.burnDps, 10 * power * this.damageMult());
+        enemy.status.burnTime = Math.max(enemy.status.burnTime, 3);
         break;
-      case 'hermes':
-        // Hermes gives back time: a chance to cut the current attack cooldown.
-        if (this.rng.chance(0.25 * power)) this.player.attackCd *= 0.5;
-        break;
-      case 'hades':
-        enemy.status.doomDamage = Math.max(enemy.status.doomDamage, 20 * power * this.damageMult());
-        if (enemy.status.doomTime <= 0) enemy.status.doomTime = 1.0;
-        break;
-      case 'gaia':
-        if (this.rng.chance(0.25 * power)) {
-          this.spawnVfx('thorn', enemy.x, enemy.y, {
-            life: 0.35,
-            angle: this.rng.angle(),
-            color: GODS.gaia.accent,
-            radius: 18,
-          });
-          this.hitEnemy(enemy, baseDamage * 0.5 * power, { onHit: false });
+      case 'ares': {
+        // Execution: the wounded die faster, which bleed alone never did.
+        if (enemy.hp <= enemy.maxHp * 0.3) {
+          this.hitEnemy(enemy, baseDamage * 1.0 * power, { onHit: false });
         }
         break;
-      case 'demeter':
-        if (this.rng.chance(0.3 * power)) this.freezeEnemy(enemy, 0.9 * power, 'ice');
+      }
+      case 'aphrodite': {
+        // Herding tool: pull the pack onto the corpse pile.
+        const radius = 130;
+        for (const other of this.grid.query(enemy.x, enemy.y, radius, this.scratch)) {
+          if (other.dead || other === enemy) continue;
+          const dx = enemy.x - other.x;
+          const dy = enemy.y - other.y;
+          const len = Math.hypot(dx, dy) || 1;
+          other.vx += (dx / len) * 90 * power;
+          other.vy += (dy / len) * 90 * power;
+        }
+        this.spawnVfx('ring', enemy.x, enemy.y, {
+          radius,
+          life: 0.25,
+          color: GODS.aphrodite.accent,
+        });
         break;
+      }
+      case 'hephaestus': {
+        const radius = 46 + 20 * power;
+        this.spawnVfx('burst', enemy.x, enemy.y, {
+          radius,
+          life: 0.25,
+          color: GODS.hephaestus.accent,
+        });
+        this.areaDamage(enemy.x, enemy.y, radius, baseDamage * 0.5 * power, false);
+        break;
+      }
+      case 'hestia': {
+        // Embers underfoot: a small, cheap patch of lasting fire.
+        this.puddles.push({
+          id: newId(),
+          x: enemy.x,
+          y: enemy.y,
+          radius: 38,
+          dps: 14 * power * this.damageMult(),
+          slow: 0,
+          life: 2.5,
+          maxLife: 2.5,
+          kind: 'ember',
+        });
+        break;
+      }
+      case 'dionysus': {
+        enemy.status.confuseTime = Math.max(enemy.status.confuseTime, 1.6 * power);
+        enemy.status.confuseDir = this.rng.angle();
+        break;
+      }
+      case 'hades': {
+        // A health tax: worthless against trash, brutal against bosses.
+        this.hitEnemy(enemy, enemy.maxHp * 0.02 * power, { onHit: false });
+        break;
+      }
+      case 'gaia': {
+        this.player.gaiaArmorTime = 2.5;
+        break;
+      }
       case 'artemis':
-        // Handled as bonus critical chance before the damage roll.
-        break;
-      case 'dionysus':
-        this.healPlayer(baseDamage * 0.12 * power);
+      case 'hermes':
+        // Applied at the moment the attack is fired, not when it lands.
         break;
     }
   }
@@ -759,10 +913,11 @@ export class Run {
     const crit = this.rng.chance(this.stats.critChance + critBonus);
     if (crit) damage *= this.stats.critMult;
 
-    // Frozen enemies are brittle.
+    // Frozen enemies are brittle, and Hera's brand opens everything up.
     if (enemy.status.frozenTime > 0 && this.mech.shatterBonus > 0) {
       damage *= 1 + this.mech.shatterBonus;
     }
+    if (enemy.status.markTime > 0) damage *= 1 + enemy.status.markAmount;
 
     enemy.hp -= damage;
     enemy.flash = 1;
@@ -798,6 +953,14 @@ export class Run {
       if (m.bleedDps > 0) {
         enemy.status.bleedDps = Math.max(enemy.status.bleedDps, m.bleedDps * this.damageMult());
         enemy.status.bleedTime = m.bleedDuration;
+      }
+      if (m.burnDps > 0) {
+        enemy.status.burnDps = Math.max(enemy.status.burnDps, m.burnDps * this.damageMult());
+        enemy.status.burnTime = m.burnDuration;
+      }
+      if (m.markChance > 0 && this.rng.chance(m.markChance)) {
+        enemy.status.markAmount = Math.max(enemy.status.markAmount, m.markAmount);
+        enemy.status.markTime = m.markDuration;
       }
       if (m.weakenAmount > 0) {
         enemy.status.weaken = Math.max(enemy.status.weaken, m.weakenAmount);
@@ -895,6 +1058,7 @@ export class Run {
     if (enemy.isBoss) {
       this.renderer.addShake(14);
       this.renderer.flash('#ffe9b0', 0.3);
+      this.hitStop = Math.max(this.hitStop, 0.12);
     }
 
     // Loot
@@ -946,6 +1110,7 @@ export class Run {
     if (m.puddleChance > 0 && this.rng.chance(m.puddleChance)) {
       this.puddles.push({
         id: newId(),
+        kind: 'water',
         x: enemy.x,
         y: enemy.y,
         radius: m.puddleRadius,
@@ -988,12 +1153,14 @@ export class Run {
       return;
     }
 
-    const dealt = Math.max(1, amount - this.stats.armor);
+    const armor = this.stats.armor + (p.gaiaArmorTime > 0 ? 3 : 0);
+    const dealt = Math.max(1, amount - armor);
     p.hp -= dealt;
     p.invuln = 0.55;
     p.hurtFlash = 1;
     this.renderer.addShake(5);
     this.renderer.flash('#ff5f5f', 0.16);
+    this.hitStop = Math.max(this.hitStop, 0.05);
     audio.play('hurt');
 
     if (this.mech.staticDamage > 0) {
@@ -1013,7 +1180,21 @@ export class Run {
     void fromX;
     void fromY;
 
+    p.noHitTime = 0;
+
     if (p.hp <= 0) {
+      // Hestia's Everlasting Flame: one refusal per voyage.
+      if (this.mech.everlastingFlame > 0 && !p.flameUsed) {
+        p.flameUsed = true;
+        p.hp = p.maxHp * this.mech.everlastingFlame;
+        p.invuln = this.mech.flameInvuln;
+        this.renderer.flash(GODS.hestia.accent, 0.6);
+        this.renderer.addShake(12);
+        this.spawnVfx('ring', p.x, p.y, { radius: 160, life: 0.6, color: GODS.hestia.accent });
+        this.areaDamage(p.x, p.y, 160, 120 * this.damageMult(), false);
+        this.events.onFlame();
+        return;
+      }
       p.hp = 0;
       this.phase = 'dead';
       audio.play('gameover');
@@ -1143,6 +1324,16 @@ export class Run {
           continue;
         }
       }
+      if (s.burnTime > 0) {
+        s.burnTime -= dt;
+        e.hp -= s.burnDps * dt;
+        if (e.hp <= 0) {
+          this.killEnemy(e);
+          continue;
+        }
+      }
+      if (s.markTime > 0) s.markTime -= dt;
+      if (s.confuseTime > 0) s.confuseTime -= dt;
       if (s.weakenTime > 0) s.weakenTime -= dt;
       if (s.slowTime > 0) s.slowTime -= dt;
       else s.slow = 0;
@@ -1194,6 +1385,13 @@ export class Run {
 
       let ax = (dx / len) * speed;
       let ay = (dy / len) * speed;
+
+      if (s.confuseTime > 0) {
+        // Drunk: it walks where it thinks it is going, which is not at you.
+        s.confuseDir += Math.sin(this.time * 3 + e.phase) * dt * 2;
+        ax = Math.cos(s.confuseDir) * speed * 0.7;
+        ay = Math.sin(s.confuseDir) * speed * 0.7;
+      }
 
       switch (e.def.behavior) {
         case 'strafe': {
@@ -1435,8 +1633,11 @@ export class Run {
   private stepOrbiters(dt: number): void {
     if (this.orbiters.length === 0) return;
     const p = this.player;
-    const damage = this.hero.weaponBase.damage * this.damageMult() * 0.9;
+    const scytheDamage =
+      this.hero.weaponBase.damage * this.damageMult() * this.mech.basicDamageMult * 0.9;
+    const automatonDamage = this.mech.automatonDamage * this.damageMult();
     for (const orb of this.orbiters) {
+      const damage = orb.kind === 'scythe' ? scytheDamage : automatonDamage;
       orb.orbitAngle += dt * 2.6;
       orb.x = p.x + Math.cos(orb.orbitAngle) * orb.orbitRadius * this.stats.rangeMult;
       orb.y = p.y + Math.sin(orb.orbitAngle) * orb.orbitRadius * this.stats.rangeMult;
@@ -1474,8 +1675,10 @@ export class Run {
         if (dist2(enemy.x, enemy.y, puddle.x, puddle.y) > (puddle.radius + enemy.radius) ** 2)
           continue;
         enemy.hp -= puddle.dps * dt;
-        enemy.status.slow = Math.max(enemy.status.slow, puddle.slow);
-        enemy.status.slowTime = Math.max(enemy.status.slowTime, 0.4);
+        if (puddle.slow > 0) {
+          enemy.status.slow = Math.max(enemy.status.slow, puddle.slow);
+          enemy.status.slowTime = Math.max(enemy.status.slowTime, 0.4);
+        }
         if (enemy.hp <= 0) this.killEnemy(enemy);
       }
     }
@@ -1593,6 +1796,8 @@ export class Run {
       this.xpNext = xpForLevel(this.level);
       audio.play('levelup');
       this.renderer.flash('#ffe9b0', 0.2);
+      this.expireTemporaryCards();
+      if (this.mech.levelHeal > 0) this.healPlayer(this.player.maxHp * this.mech.levelHeal);
       this.events.onLevelUp(this.level);
       const offers = drawOffers({
         rng: this.rng,
@@ -1692,9 +1897,22 @@ export class Run {
   }
 
   /** Called by the UI once the player picks a card. */
-  take(card: CardDef): void {
+  take(offer: Offer): void {
+    const { card } = offer;
+
+    // A swap: everything that god gave you goes back before the new one lands.
+    if (offer.replaces) {
+      for (const [id] of [...this.owned]) {
+        if (cardById(id)?.god === offer.replaces) this.owned.delete(id);
+      }
+      this.expiries.delete(offer.replaces);
+    }
+
     const level = (this.owned.get(card.id) ?? 0) + 1;
     this.owned.set(card.id, level);
+    if (card.temporaryLevels) {
+      this.expiries.set(card.id, this.level + card.temporaryLevels);
+    }
     if (card.id === BOUNTY_CARD.id) {
       this.gold += 40;
       this.healPlayer(this.player.maxHp * 0.15);
@@ -1702,9 +1920,31 @@ export class Run {
     if (card.kind === 'boon') audio.play('boon');
     else audio.play('tap');
     this.rebuildLoadout();
-    // Perks that raise max health should feel like an immediate heal.
-    if (card.id === 'perk_hp') this.healPlayer(22);
+    // Health perks should feel like an immediate heal, not a bigger empty bar.
+    if (card.id === 'perk_wine') this.healPlayer(24);
     this.presentNextChoice();
+  }
+
+  /** Temporary perks wear off after a set number of level-ups. */
+  private expireTemporaryCards(): void {
+    let changed = false;
+    for (const [id, expiresAt] of [...this.expiries]) {
+      if (this.level < expiresAt) continue;
+      this.expiries.delete(id);
+      this.owned.delete(id);
+      changed = true;
+    }
+    if (changed) this.rebuildLoadout();
+  }
+
+  /** Temporary cards still running, with how many level-ups they have left. */
+  activeTemporary(): { card: CardDef; levelsLeft: number }[] {
+    const out: { card: CardDef; levelsLeft: number }[] = [];
+    for (const [id, expiresAt] of this.expiries) {
+      const card = cardById(id);
+      if (card) out.push({ card, levelsLeft: Math.max(0, expiresAt - this.level) });
+    }
+    return out;
   }
 
   hasPendingChoice(): boolean {
@@ -1723,7 +1963,7 @@ export class Run {
     if (this.queue.length > 0) this.presentNextChoice();
   }
 
-  /** Ad-reward or Star Chart revive: clear the area and stand back up. */
+  /** Ad-reward or permanent upgrades revive: clear the area and stand back up. */
   revive(): boolean {
     if (this.phase !== 'dead') return false;
     this.player.hp = this.player.maxHp * 0.6;

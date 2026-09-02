@@ -5,6 +5,12 @@ import type { GodId } from './gods';
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type CardKind = 'boon' | 'weapon' | 'perk';
 
+/**
+ * How a card actually reaches the enemy. Players kept asking whether a boon
+ * changed their attack or fired on its own, so every card says which it is.
+ */
+export type EffectKind = 'attack' | 'auto' | 'passive' | 'trigger';
+
 export interface CardDef {
   id: string;
   kind: CardKind;
@@ -12,6 +18,15 @@ export interface CardDef {
   maxLevel: number;
   /** boons only: which god granted it */
   god?: GodId;
+  /** how it works: rides your attack, fires itself, always on, or triggers */
+  effect: EffectKind;
+  /** emblem shown on the card and in the run summary; gods use their own */
+  icon?: string;
+  /**
+   * Set on cards that wear off. The card is dropped this many level-ups after
+   * it is taken, and the HUD counts the levels down while it is running.
+   */
+  temporaryLevels?: number;
   name: LocalizedText;
   /** `{0}`, `{1}`… are filled from `values(level)` */
   desc: LocalizedText;
@@ -36,7 +51,7 @@ export const RARITY_WEIGHT: Record<Rarity, number> = {
   legendary: 5,
 };
 
-/** Luck (from perks and the Star Chart) tilts the draw toward the top of the table. */
+/** Luck (from perks and the permanent upgrades) tilts the draw toward the top of the table. */
 export function rarityWeight(rarity: Rarity, luck: number): number {
   const base = RARITY_WEIGHT[rarity];
   const bonus =

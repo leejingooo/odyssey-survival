@@ -3,11 +3,11 @@ import type { Loadout } from '../game/stats';
 import type { SaveData } from '../core/storage';
 
 /**
- * Meta progression — the Star Chart. Everything here is bought with gold
+ * Meta progression — the permanent upgrades. Everything here is bought with gold
  * that survives death, and the headline entry is `boonSlots`: how many
  * different gods may bless a single voyage (1 at first, up to 3).
  */
-export interface ChartDef {
+export interface PermanentDef {
   id: string;
   maxRank: number;
   /** costs[r] buys rank r+1 */
@@ -18,7 +18,7 @@ export interface ChartDef {
   apply?: (out: Loadout, rank: number) => void;
 }
 
-export const STAR_CHART: ChartDef[] = [
+export const PERMANENT: PermanentDef[] = [
   {
     id: 'boonSlots',
     maxRank: 2,
@@ -93,46 +93,46 @@ export const STAR_CHART: ChartDef[] = [
   },
 ];
 
-export function chartRank(save: SaveData, id: string): number {
-  return save.starChart[id] ?? 0;
+export function permanentRank(save: SaveData, id: string): number {
+  return save.permanent[id] ?? 0;
 }
 
 /** Cost of the next rank, or null when maxed. */
-export function nextCost(def: ChartDef, rank: number): number | null {
+export function nextCost(def: PermanentDef, rank: number): number | null {
   return rank >= def.maxRank ? null : def.costs[rank];
 }
 
-export function chartName(id: string): string {
-  return t(`chart.${id}.name` as DictKey);
+export function permanentName(id: string): string {
+  return t(`perm.${id}.name` as DictKey);
 }
 
 /** Description shown at the rank the player would have *after* buying. */
-export function chartDesc(def: ChartDef, rank: number): string {
+export function permanentDesc(def: PermanentDef, rank: number): string {
   const shown = def.value(Math.min(rank + (rank < def.maxRank ? 1 : 0), def.maxRank));
-  return t(`chart.${def.id}.desc` as DictKey, shown);
+  return t(`perm.${def.id}.desc` as DictKey, shown);
 }
 
-export function applyStarChart(out: Loadout, save: SaveData): void {
-  for (const def of STAR_CHART) {
-    const rank = chartRank(save, def.id);
+export function applyPermanent(out: Loadout, save: SaveData): void {
+  for (const def of PERMANENT) {
+    const rank = permanentRank(save, def.id);
     if (rank > 0) def.apply?.(out, rank);
   }
 }
 
 /** How many different gods may bless one voyage: 1 by default, 3 fully upgraded. */
 export function maxBoonGods(save: SaveData): number {
-  return 1 + chartRank(save, 'boonSlots');
+  return 1 + permanentRank(save, 'boonSlots');
 }
 
 export function startingLevel(save: SaveData): number {
-  return 1 + chartRank(save, 'headstart');
+  return 1 + permanentRank(save, 'headstart');
 }
 
 export function startingRevives(save: SaveData): number {
-  return chartRank(save, 'defiance');
+  return permanentRank(save, 'defiance');
 }
 
 /** Multiplier on how often treasure chests appear. */
 export function chestRateMult(save: SaveData): number {
-  return 1 + 0.15 * chartRank(save, 'treasure');
+  return 1 + 0.15 * permanentRank(save, 'treasure');
 }
