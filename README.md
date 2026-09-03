@@ -171,6 +171,7 @@ src/
   ui/           DOM 오버레이: 화면들, HUD, 런타임 생성 아이콘
   i18n/         ko / en / ja / zh 사전과 t() 런타임
 tests/          Playwright 기반 스모크 · 플로우 · 소크 테스트
+scripts/        게임 데이터에서 능력 도감(docs/CODEX.md)을 생성
 ```
 
 이미지 에셋이 하나도 없습니다. 영웅, 신의 문양, 카드 아이콘, 적, 이펙트까지 모두 런타임에
@@ -258,6 +259,19 @@ npm run cap:ios          # 빌드 + 동기화 + Xcode 열기
   `@capacitor/haptics`로 교체하는 것을 권장합니다.
 
 ---
+
+## 능력 도감
+
+축복 45종·무기 강화·특성·영구 강화의 **단계별 수치 전부**가
+[`docs/CODEX.md`](docs/CODEX.md) 에 있습니다.
+
+이 파일은 손으로 쓴 게 아니라 **게임 데이터에서 직접 생성**됩니다. 밸런스를 고쳤으면
+다시 뽑으면 되고, 그래서 문서가 코드와 어긋날 일이 없습니다.
+
+```bash
+npm run codex          # 한국어 → docs/CODEX.md
+npm run codex -- en    # 영어   → docs/CODEX.en.md
+```
 
 ## 테스트
 

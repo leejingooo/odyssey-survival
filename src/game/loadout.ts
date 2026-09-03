@@ -157,8 +157,13 @@ export function drawOffers(opts: DrawOptions): Offer[] {
   const picks = rng.sampleWeighted(candidates, count, (card) => {
     let weight = rarityWeight(card.rarity, luck);
     if ((owned.get(card.id) ?? 0) > 0) weight *= 1.3;
-    // Swaps are a real cost, so they stay a minority of what you see.
-    if (card.god && !gods.has(card.god)) weight *= 0.35;
+    if (card.god && !gods.has(card.god)) {
+      // Giving a god up is a real cost, so swaps stay a minority of what you
+      // see. A god you simply have room for is not penalised at all — that
+      // penalty used to apply either way, which buried every god you had not
+      // already taken and made whichever one you took first feel omnipresent.
+      weight *= full ? 0.3 : 1;
+    }
     return weight;
   });
 
