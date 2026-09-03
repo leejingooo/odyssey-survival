@@ -1,5 +1,6 @@
 import { audio } from './core/audio';
 import { DragInput } from './core/input';
+import { haptics } from './core/haptics';
 import { GameLoop } from './core/loop';
 import { Renderer } from './core/renderer';
 import { clearSave, loadSave, writeSave, type SaveData } from './core/storage';
@@ -62,6 +63,7 @@ export class App {
     setLocale(this.save.locale);
     audio.sfxEnabled = this.save.sfx;
     audio.musicEnabled = this.save.music;
+    haptics.enabled = this.save.haptics;
 
     this.money = new Monetization(
       new StubAdProvider(ui),
@@ -240,6 +242,7 @@ export class App {
 
   private commit(): void {
     audio.sfxEnabled = this.save.sfx;
+    haptics.enabled = this.save.haptics;
     if (audio.musicEnabled !== this.save.music) audio.setMusicEnabled(this.save.music);
     writeSave(this.save);
   }
@@ -354,14 +357,16 @@ export class App {
         onLevelUp: () => this.vibrate(12),
         onBoss: (name) => {
           this.showBanner(name);
-          this.vibrate(40);
+          haptics.play('boss');
         },
         onNarrative: (text) => this.toast(text),
         onFlame: () => {
           this.toast(t('story.flame'));
-          this.vibrate(60);
+          haptics.play('reward');
         },
         onDeath: () => this.showDeath(),
+        onAttackHit: () => haptics.play('attack'),
+        onPlayerHit: (blocked) => haptics.play(blocked ? 'blocked' : 'hurt'),
       },
     });
 
@@ -447,7 +452,7 @@ export class App {
     const run = this.run;
     if (!run) return;
     this.input.setEnabled(false);
-    this.vibrate(90);
+    haptics.play('death');
     this.showOverlay(
       deathScreen(run, {
         canFreeRevive: run.revivesLeft > 0,

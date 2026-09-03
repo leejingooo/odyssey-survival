@@ -174,9 +174,9 @@ tests/          Playwright 기반 스모크 · 플로우 · 소크 테스트
 scripts/        게임 데이터에서 능력 도감(docs/CODEX.md)을 생성
 ```
 
-이미지 에셋이 하나도 없습니다. 영웅, 신의 문양, 카드 아이콘, 적, 이펙트까지 모두 런타임에
-캔버스로 그리고 효과음도 WebAudio로 합성합니다. 덕분에 전체 번들이 gzip 61KB 수준이고,
-모바일 웹에서 즉시 뜹니다.
+이미지 에셋이 하나도 없습니다. 영웅별 실루엣이 살아 있는 벡터 스프라이트부터 신의 문양,
+카드 아이콘, 적, 이펙트까지 모두 런타임에 캔버스로 그리고 효과음도 WebAudio로 합성합니다.
+덕분에 설치 용량을 거의 늘리지 않으면서도 모바일 웹에서 즉시 뜹니다.
 
 애니메이션도 시뮬레이션이 이미 들고 있는 두 개의 시계로 만듭니다 — 이동 중에만 도는
 `walkPhase`(걸음 흔들림)와 `attackProgress`(0이면 방금 휘두름, 1이면 다음 공격 준비 완료).
@@ -255,8 +255,9 @@ npm run cap:ios          # 빌드 + 동기화 + Xcode 열기
   `android:screenOrientation="portrait"`, iOS는 Xcode의 Deployment Info에서 Portrait만 체크.
 - **노치 대응** — CSS에 `env(safe-area-inset-*)`가 이미 적용돼 있고, `index.html`에
   `viewport-fit=cover`가 들어 있습니다.
-- **진동** — 현재 웹 `navigator.vibrate`를 씁니다. iOS에서는 동작하지 않으므로
-  `@capacitor/haptics`로 교체하는 것을 권장합니다.
+- **진동** — 웹에서는 `navigator.vibrate`, 네이티브 앱에서는 `@capacitor/haptics`를 자동으로
+  사용합니다. 기본 공격 적중은 짧고 가볍게, 피격·방어·보스·사망은 서로 다른 강도와 패턴으로
+  구분됩니다. 설정에서 언제든 끌 수 있습니다.
 
 ---
 

@@ -50,12 +50,7 @@ export function drawRun(run: Run, r: Renderer, wallTime: number): void {
 
 // ------------------------------------------------------------------ player
 
-/**
- * Heroes are drawn as a hooded body with a weapon held in hand, animated from
- * two clocks the simulation already keeps: `walkPhase` (a bob while moving) and
- * `attackProgress` (0 right after a swing, 1 when the next one is ready). That
- * is enough for the eye to read weight and rhythm without a single sprite.
- */
+/** Vector sprites assembled on the canvas, with a silhouette unique to each hero. */
 function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): void {
   const p = run.player;
   const hero = run.hero;
@@ -137,12 +132,80 @@ function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): 
   ctx.beginPath();
   ctx.arc(0, -10.5, 5.4, Math.PI, 0);
   ctx.fill();
+  drawHeroDetails(ctx, hero.id, skin, trim);
   ctx.rotate(-lean);
 
   drawWeapon(ctx, hero.weapon, p.facing, swing, skin, trim);
   ctx.restore();
 
   drawShields(ctx, p.x, p.y + bob, p.shields, wallTime);
+}
+
+/** Small high-contrast details keep every hero readable in a crowded phone screen. */
+function drawHeroDetails(
+  ctx: CanvasRenderingContext2D,
+  heroId: string,
+  color: string,
+  accent: string,
+): void {
+  ctx.save();
+  ctx.strokeStyle = '#0a0812';
+  ctx.fillStyle = accent;
+  ctx.lineWidth = 1.2;
+  if (heroId === 'odysseus') {
+    // Traveller's blue shoulder mantle and golden cloak clasp.
+    ctx.fillStyle = '#315d86';
+    ctx.beginPath();
+    ctx.moveTo(-6, -5);
+    ctx.quadraticCurveTo(0, -1, 6, -5);
+    ctx.lineTo(5, 1);
+    ctx.quadraticCurveTo(0, -2, -5, 1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(0, -4, 1.6, 0, TAU);
+    ctx.fill();
+  } else if (heroId === 'achilles') {
+    // The tall crest makes Achilles unmistakable even behind a mob.
+    ctx.beginPath();
+    ctx.moveTo(-1.8, -15);
+    ctx.quadraticCurveTo(1, -22, 5, -18);
+    ctx.lineTo(2, -13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#a9363d';
+    ctx.fillRect(-5.5, -8, 11, 2.5);
+  } else if (heroId === 'sisyphus') {
+    ctx.fillStyle = '#5b6470';
+    ctx.fillRect(-5, -12, 10, 2.2);
+    ctx.strokeStyle = accent;
+    ctx.beginPath();
+    ctx.moveTo(-6, 1);
+    ctx.lineTo(6, 5);
+    ctx.stroke();
+  } else if (heroId === 'thanatos') {
+    ctx.fillStyle = '#171124';
+    ctx.beginPath();
+    ctx.arc(0, -9, 4, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(-1.7, -9.5, 0.9, 0, TAU);
+    ctx.arc(1.7, -9.5, 0.9, 0, TAU);
+    ctx.fill();
+    // Wing-like shroud fins echo classical depictions of Thanatos.
+    ctx.fillStyle = accent;
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * 5, -4);
+      ctx.lineTo(side * 12, -10);
+      ctx.lineTo(side * 8, 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 /** The held weapon, rotated to the hero's heading and thrust on the swing. */
