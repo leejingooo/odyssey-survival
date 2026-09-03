@@ -62,6 +62,10 @@ export interface RunEvents {
   /** Hestia caught you: worth a line, because it looks like a death otherwise */
   onFlame(): void;
   onNarrative(text: string): void;
+  /** A direct basic-attack impact, excluding damage-over-time ticks. */
+  onAttackHit(critical: boolean): void;
+  /** Damage received, or a shield charge spent to stop it. */
+  onPlayerHit(blocked: boolean): void;
 }
 
 // Past this the screen stops reading as a crowd and starts reading as a wall,
@@ -921,6 +925,7 @@ export class Run {
 
     enemy.hp -= damage;
     enemy.flash = 1;
+    if (opts.onHit) this.events.onAttackHit(crit);
 
     if (this.mech.drain > 0) this.healPlayer(damage * this.mech.drain);
     if (crit && this.mech.critSplashRadius > 0) {
@@ -1150,6 +1155,7 @@ export class Run {
       if (this.mech.reflectDamage > 0) {
         this.areaDamage(p.x, p.y, 110, this.mech.reflectDamage * this.damageMult(), false);
       }
+      this.events.onPlayerHit(true);
       return;
     }
 
@@ -1162,6 +1168,7 @@ export class Run {
     this.renderer.flash('#ff5f5f', 0.16);
     this.hitStop = Math.max(this.hitStop, 0.05);
     audio.play('hurt');
+    this.events.onPlayerHit(false);
 
     if (this.mech.staticDamage > 0) {
       this.spawnVfx('ring', p.x, p.y, {

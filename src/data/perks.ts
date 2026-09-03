@@ -17,7 +17,7 @@ export const PERKS: CardDef[] = [
     icon: '🍎',
     rarity: 'common',
     maxLevel: 8,
-    name: L('힘의 석류', 'Pomegranate of Might', '力のザクロ', '力量石榴'),
+    name: L('완력의 석류', 'Pomegranate of Might', '力のザクロ', '力量石榴'),
     desc: L(
       '기본 공격 피해 +{0}%.',
       'Basic attack damage +{0}%.',
@@ -108,8 +108,13 @@ export const PERKS: CardDef[] = [
     icon: '🧲',
     rarity: 'common',
     maxLevel: 4,
-    name: L('자석의 돌', 'Lodestone', '磁鉄の石', '磁石'),
-    desc: L('획득 반경 +{0}%.', 'Pickup range +{0}%.', '取得範囲+{0}%。', '拾取范围 +{0}%。'),
+    name: L('자석석', 'Lodestone', '磁鉄の石', '磁石'),
+    desc: L(
+      '아이템 획득 범위 +{0}%.',
+      'Pickup range +{0}%.',
+      '取得範囲+{0}%。',
+      '拾取范围 +{0}%。',
+    ),
     values: (lv) => [30 * lv],
     apply: (o, lv) => {
       o.stats.pickupRadius *= 1 + 0.3 * lv;

@@ -58,7 +58,7 @@ export const BOONS: CardDef[] = [
     effect: 'trigger',
     rarity: 'epic',
     maxLevel: 3,
-    name: L('학살의 기세', 'Slaughter Rush', '虐殺の勢い', '屠戮之势'),
+    name: L('피바람', 'Slaughter Rush', '虐殺の勢い', '屠戮之势'),
     desc: L(
       '적을 쓰러뜨릴 때마다 {0}초 동안 공격 속도 +{1}%. 계속 죽이면 계속 빨라진다.',
       'Every kill grants +{1}% attack speed for {0}s. Keep killing, keep accelerating.',
@@ -80,7 +80,7 @@ export const BOONS: CardDef[] = [
     effect: 'trigger',
     rarity: 'common',
     maxLevel: 3,
-    name: L('반사의 방벽', 'Deflection', '反射の壁', '反射壁垒'),
+    name: L('응징의 방패', 'Deflection', '反射の壁', '反射壁垒'),
     desc: L(
       '방어 +{0}. 보호막이 깨질 때 주변에 {1}의 피해로 되받아친다.',
       'Armour +{0}. When a shield breaks it lashes back for {1} around you.',
@@ -120,7 +120,7 @@ export const BOONS: CardDef[] = [
     effect: 'passive',
     rarity: 'epic',
     maxLevel: 3,
-    name: L('전술안', 'Tactician’s Eye', '戦術眼', '战术之眼'),
+    name: L('전술가의 눈', 'Tactician’s Eye', '戦術眼', '战术之眼'),
     desc: L(
       '급소가 보인다. 치명타 확률 +{0}%, 치명타 피해 +{1}%.',
       'You start seeing the openings. Crit chance +{0}%, crit damage +{1}%.',
@@ -142,7 +142,7 @@ export const BOONS: CardDef[] = [
     effect: 'passive',
     rarity: 'common',
     maxLevel: 3,
-    name: L('신속', 'Swiftness', '神速', '神速'),
+    name: L('신의 발걸음', 'Swiftness', '神速', '神速'),
     desc: L(
       '이동 속도 +{0}%, 공격 속도 +{1}%, 획득 반경 +{2}%.',
       'Move speed +{0}%, attack speed +{1}%, pickup range +{2}%.',
@@ -286,7 +286,7 @@ export const BOONS: CardDef[] = [
     effect: 'trigger',
     rarity: 'rare',
     maxLevel: 3,
-    name: L('밀물의 웅덩이', 'Rising Pools', '満ち潮の淵', '涨潮之池'),
+    name: L('밀물 웅덩이', 'Rising Pools', '満ち潮の淵', '涨潮之池'),
     desc: L(
       '{0}% 확률로 쓰러진 자리에 물웅덩이가 남는다. 밟은 적은 초당 {1}씩 깎이고 {2}% 느려진다.',
       'Kills leave a pool {0}% of the time: {1} damage a second and {2}% slower.',
@@ -520,7 +520,7 @@ export const BOONS: CardDef[] = [
     effect: 'attack',
     rarity: 'common',
     maxLevel: 3,
-    name: L('달군 무기', 'Forge-Hot Weapon', '灼熱の武器', '灼热之兵'),
+    name: L('용광로의 무기', 'Forge-Hot Weapon', '灼熱の武器', '灼热之兵'),
     desc: L(
       '무기가 벌겋게 달아 맞은 적을 {1}초 동안 초당 {0}씩 태운다.',
       'Your weapon glows: enemies burn for {0} a second over {1}s.',
@@ -727,7 +727,7 @@ export const BOONS: CardDef[] = [
     effect: 'attack',
     rarity: 'rare',
     maxLevel: 3,
-    name: L('포도넝쿨', 'Vine Snare', '葡萄の蔓', '葡萄藤缚'),
+    name: L('덩굴 속박', 'Vine Snare', '葡萄の蔓', '葡萄藤缚'),
     desc: L(
       '{0}% 확률로 넝쿨이 적의 발을 {1}초 동안 붙잡는다.',
       '{0}% chance vines pin an enemy in place for {1}s.',
@@ -870,7 +870,7 @@ export const BOONS: CardDef[] = [
     effect: 'trigger',
     rarity: 'epic',
     maxLevel: 3,
-    name: L('은빛 사냥', 'Silver Hunt', '銀の狩り', '银色狩猎'),
+    name: L('은빛 추격', 'Silver Hunt', '銀の狩り', '银色狩猎'),
     desc: L(
       '치명타가 터질 때마다 반경 {0} 안으로 그 피해의 {1}%가 흩뿌려진다.',
       'Every crit scatters {1}% of its damage within {0}.',

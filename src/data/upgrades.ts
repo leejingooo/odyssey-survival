@@ -15,7 +15,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '🗡️',
     rarity: 'common',
     maxLevel: 5,
-    name: L('날카로움', 'Keen Edge', '鋭さ', '锋锐'),
+    name: L('무기 연마', 'Keen Edge', '鋭さ', '锋锐'),
     desc: L(
       '기본 공격 피해 +{0}%.',
       'Basic attack damage +{0}%.',
@@ -34,7 +34,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '💨',
     rarity: 'common',
     maxLevel: 5,
-    name: L('신속한 손', 'Quick Hands', '素早い手', '疾手'),
+    name: L('속사', 'Quick Hands', '素早い手', '疾手'),
     desc: L('공격 속도 +{0}%.', 'Attack speed +{0}%.', '攻撃速度+{0}%。', '攻击速度 +{0}%。'),
     values: (lv) => [at([10, 21, 33, 46, 62], lv)],
     apply: (o, lv) => {
@@ -48,7 +48,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '🏹',
     rarity: 'common',
     maxLevel: 4,
-    name: L('먼 사냥', 'Far Hunt', '遠き狩り', '远猎'),
+    name: L('사거리 확장', 'Far Hunt', '遠き狩り', '远猎'),
     desc: L('공격 사거리 +{0}%.', 'Attack range +{0}%.', '攻撃射程+{0}%。', '攻击射程 +{0}%。'),
     values: (lv) => [at([15, 32, 52, 76], lv)],
     apply: (o, lv) => {
@@ -62,7 +62,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '⭕',
     rarity: 'common',
     maxLevel: 4,
-    name: L('확대', 'Broadened', '拡大', '扩张'),
+    name: L('위력 범위', 'Broadened', '拡大', '扩张'),
     desc: L(
       '공격 판정 크기 +{0}%.',
       'Attack size +{0}%.',
@@ -83,7 +83,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     maxLevel: 3,
     name: L('다중 사격', 'Multishot', '多重射撃', '多重射击'),
     desc: L(
-      '기본 공격이 {0}회 더 나간다.',
+      '기본 공격 횟수가 {0}회 늘어난다.',
       'Your basic attack fires {0} more time(s).',
       '基本攻撃が{0}回追加で放たれる。',
       '普通攻击额外发射 {0} 次。',
@@ -102,7 +102,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     maxLevel: 3,
     name: L('관통', 'Piercing', '貫通', '贯穿'),
     desc: L(
-      '공격이 적을 {0}명 더 관통한다.',
+      '공격이 적을 추가로 {0}명 관통한다.',
       'Attacks pierce {0} more enemies.',
       '攻撃が敵をさらに{0}体貫通する。',
       '攻击额外贯穿 {0} 名敌人。',
@@ -119,9 +119,9 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '🧭',
     rarity: 'rare',
     maxLevel: 2,
-    name: L('유도', 'Seeking', '誘導', '追踪'),
+    name: L('추적 공격', 'Seeking', '誘導', '追踪'),
     desc: L(
-      '공격이 가까운 적을 추적한다. (추적력 {0}%)',
+      '공격이 가까운 적을 따라 휘어진다. 추적 성능 {0}%.',
       'Attacks curve toward nearby enemies. (tracking {0}%)',
       '攻撃が近くの敵を追尾する。（追尾力{0}%）',
       '攻击会追踪附近敌人。（追踪力 {0}%）',
@@ -138,7 +138,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '💢',
     rarity: 'rare',
     maxLevel: 4,
-    name: L('급소 찌르기', 'Vital Strike', '急所突き', '致命一击'),
+    name: L('회심의 일격', 'Vital Strike', '急所突き', '致命一击'),
     desc: L(
       '치명타 확률 +{0}%, 치명타 피해 +{1}%.',
       'Critical chance +{0}%, critical damage +{1}%.',
