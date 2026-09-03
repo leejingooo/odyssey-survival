@@ -1,10 +1,12 @@
-import { formatTime, t } from '../i18n';
-import type { GodId } from '../data/gods';
+import { GODS, type GodId } from '../data/gods';
 import type { Run } from '../game/run';
+import { formatTime, t } from '../i18n';
 import { clear, el } from './dom';
-import { godPip } from './glyph';
 
-/** Persistent in-run overlay. Built once, then mutated every frame — no re-render. */
+/**
+ * Persistent in-run overlay. Built once and then mutated every frame, so the
+ * only DOM work per frame is a handful of text and width assignments.
+ */
 export class Hud {
   readonly root: HTMLElement;
 
@@ -16,8 +18,10 @@ export class Hud {
   private readonly hpText: HTMLElement;
   private readonly xpFill: HTMLElement;
   private readonly boonStrip: HTMLElement;
+  private readonly tempStrip: HTMLElement;
 
   private lastGods = '';
+  private lastTemp = '';
 
   constructor(onPause: () => void) {
     this.timer = el('div', { class: 'hud-timer', text: '0:00' });
@@ -28,6 +32,7 @@ export class Hud {
     this.hpText = el('span', { text: '' });
     this.xpFill = el('div', { class: 'bar__fill' });
     this.boonStrip = el('div', { class: 'boon-strip' });
+    this.tempStrip = el('div', { class: 'temp-strip' });
 
     const pauseBtn = el('button', {
       class: 'hud-btn',
@@ -55,6 +60,7 @@ export class Hud {
         ]),
       ]),
       this.boonStrip,
+      this.tempStrip,
     ]);
   }
 
@@ -67,23 +73,46 @@ export class Hud {
     this.hpText.textContent = `${Math.ceil(run.player.hp)} / ${Math.round(run.player.maxHp)}`;
     this.xpFill.style.width = `${run.xpProgress * 100}%`;
 
-    // The boon strip only rebuilds when the set of gods or their levels changes.
+    // Both strips only rebuild when what they show actually changes.
     const gods = [...run.godsHeld];
-    const signature = gods.map((god) => `${god}:${godLevel(run, god)}`).join(',');
-    if (signature !== this.lastGods) {
-      this.lastGods = signature;
+    const godSignature = gods.map((god) => `${god}:${godRanks(run, god)}`).join(',');
+    if (godSignature !== this.lastGods) {
+      this.lastGods = godSignature;
       clear(this.boonStrip);
       for (const god of gods) {
-        const pip = el('div', { class: 'boon-pip' }, [godPip(god, 24)]);
-        pip.append(el('span', { class: 'boon-pip__lv', text: String(godLevel(run, god)) }));
+        const pip = el('div', {
+          class: 'boon-pip',
+          style: { '--accent': GODS[god].color } as Record<string, string>,
+        });
+        pip.append(
+          el('span', { class: 'boon-pip__emblem', text: GODS[god].emblem }),
+          el('span', { class: 'boon-pip__lv', text: String(godRanks(run, god)) }),
+        );
         this.boonStrip.append(pip);
+      }
+    }
+
+    // Temporary perks need a visible countdown or they feel like a bug when
+    // they disappear.
+    const temps = run.activeTemporary();
+    const tempSignature = temps.map((x) => `${x.card.id}:${x.levelsLeft}`).join(',');
+    if (tempSignature !== this.lastTemp) {
+      this.lastTemp = tempSignature;
+      clear(this.tempStrip);
+      for (const { card, levelsLeft } of temps) {
+        this.tempStrip.append(
+          el('div', { class: 'temp-pip', title: `${t('hud.temporary')} ${levelsLeft}` }, [
+            el('span', { class: 'temp-pip__icon', text: card.icon ?? '✦' }),
+            el('span', { class: 'temp-pip__lv', text: String(levelsLeft) }),
+          ]),
+        );
       }
     }
   }
 }
 
-/** Total boon ranks taken from one god — what the HUD pip shows. */
-function godLevel(run: Run, god: GodId): number {
+/** Total boon ranks taken from one god — what the HUD pip counts. */
+function godRanks(run: Run, god: GodId): number {
   let total = 0;
   for (const [id, level] of run.owned) {
     if (id.startsWith(`${god}_`)) total += level;

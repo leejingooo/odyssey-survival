@@ -81,10 +81,10 @@ export const HEROES: Record<HeroId, HeroDef> = {
     color: '#9aa4b2',
     accent: '#e2e8f0',
     stats: { maxHp: 120, moveSpeed: 108, armor: 1 },
-    mech: { splashRadius: 44, splashDamage: 0.55, knockback: 22 },
+    mech: { splashRadius: 52, splashDamage: 0.55, knockback: 22 },
     weaponBase: {
       damage: 30,
-      cooldown: 1.05,
+      cooldown: 0.95,
       range: 250,
       speed: 205,
       count: 1,

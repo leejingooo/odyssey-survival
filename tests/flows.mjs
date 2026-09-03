@@ -1,7 +1,7 @@
 /**
  * Flow test. Walks the parts of the game the smoke test does not reach: every
- * hero actually fighting, dying into the results screen, spending a Star Chart
- * revive, buying a Star Chart rank, unlocking a god in the Pantheon, and
+ * hero actually fighting, dying into the results screen, spending a Defiance
+ * revive, buying a permanent upgrade, unlocking a god in the Pantheon, and
  * switching language.
  *
  *   npm run build && npm run preview   # in one terminal
@@ -16,7 +16,7 @@ const SAVE_KEY = 'odyssey-survival/save/v1';
 const RICH = {
   version: 1,
   gold: 100000,
-  starChart: {},
+  permanent: {},
   unlockedHeroes: ['odysseus', 'achilles', 'sisyphus', 'thanatos'],
   unlockedGods: [],
   lastHero: 'odysseus',
@@ -74,7 +74,7 @@ for (const [index, hero] of ['odysseus', 'achilles', 'sisyphus', 'thanatos'].ent
   await page.mouse.move(195, 520);
   await page.mouse.down();
   let heading = 0;
-  for (let step = 0; step < 110; step++) {
+  for (let step = 0; step < 170; step++) {
     const snap = await snapshot(page);
     if (snap?.nearestChest) heading = Math.atan2(snap.nearestChest.dy, snap.nearestChest.dx);
     else if (step % 7 === 0) heading += 1.3;
@@ -91,6 +91,8 @@ for (const [index, hero] of ['odysseus', 'achilles', 'sisyphus', 'thanatos'].ent
   await page.mouse.up();
   const snap = await snapshot(page);
   results[hero] = { kills: snap.kills, level: snap.level, time: snap.time };
+  // Enough time that a working weapon always lands something; a zero here
+  // means the hero's attack is broken, not that the draw was unlucky.
   if (snap.kills <= 0) failures.push(`${hero}: killed nothing`);
   if (OUT) await page.screenshot({ path: `${OUT}/hero-${hero}.png` });
   await page.close();
@@ -102,6 +104,10 @@ async function playUntilDead(page) {
     await page.waitForTimeout(600);
     const snap = await snapshot(page);
     if (snap.phase === 'dead') return snap;
+    // A card screen pauses the simulation, so it has to be cleared or the run
+    // simply stops instead of ending.
+    const card = page.locator('.card').first();
+    if (await card.count()) await card.click();
   }
   return null;
 }
@@ -127,9 +133,9 @@ async function playUntilDead(page) {
   await page.close();
 }
 
-// ---- 3. a Star Chart revive puts you back on your feet ---------------------
+// ---- 3. a Defiance revive puts you back on your feet ----------------------
 {
-  const page = await openRun({ ...RICH, starChart: { defiance: 1 } });
+  const page = await openRun({ ...RICH, permanent: { defiance: 1 } });
   const dead = await playUntilDead(page);
   results.revive = { died: dead !== null };
   if (!dead) failures.push('revive case: player never died');
@@ -149,14 +155,15 @@ async function playUntilDead(page) {
   const page = await newPage(RICH);
   await page
     .locator('.btn')
-    .filter({ hasText: /Star Chart/ })
+    .filter({ hasText: /Upgrades/ })
     .click();
   await page.waitForSelector('.row-list');
   const pipsBefore = await page.locator('.pip.is-on').count();
   await page.locator('.row .btn').nth(1).click();
   await page.waitForTimeout(200);
-  results.starChart = { pipsBefore, pipsAfter: await page.locator('.pip.is-on').count() };
-  if (results.starChart.pipsAfter <= pipsBefore) failures.push('star chart rank was not bought');
+  results.permanent = { pipsBefore, pipsAfter: await page.locator('.pip.is-on').count() };
+  if (results.permanent.pipsAfter <= pipsBefore)
+    failures.push('permanent upgrade rank was not bought');
   if (OUT) await page.screenshot({ path: `${OUT}/chart.png` });
 
   await page.locator('.btn--ghost').first().click();

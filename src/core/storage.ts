@@ -6,8 +6,8 @@ const SAVE_VERSION = 1;
 export interface SaveData {
   version: number;
   gold: number;
-  /** star chart upgrade id -> purchased rank */
-  starChart: Record<string, number>;
+  /** permanent upgrades upgrade id -> purchased rank */
+  permanent: Record<string, number>;
   unlockedHeroes: string[];
   /** gods bought in the Pantheon; the free ones are not listed here */
   unlockedGods: string[];
@@ -37,7 +37,7 @@ function freshSave(): SaveData {
   return {
     version: SAVE_VERSION,
     gold: 0,
-    starChart: {},
+    permanent: {},
     unlockedHeroes: ['odysseus'],
     unlockedGods: [],
     lastHero: 'odysseus',
@@ -60,7 +60,7 @@ function migrate(raw: unknown): SaveData {
     ...base,
     ...data,
     version: SAVE_VERSION,
-    starChart: { ...base.starChart, ...(data.starChart ?? {}) },
+    permanent: { ...base.permanent, ...(data.permanent ?? {}) },
     unlockedHeroes:
       Array.isArray(data.unlockedHeroes) && data.unlockedHeroes.length > 0
         ? data.unlockedHeroes

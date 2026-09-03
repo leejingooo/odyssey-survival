@@ -152,10 +152,10 @@ export const WAVES: WaveDef[] = [
   { fromMinute: 2.5, rate: 2.5, weights: { shade: 9, harpy: 7, spartoi: 3 } },
   { fromMinute: 4, rate: 3.2, weights: { shade: 7, harpy: 7, spartoi: 5, siren: 2 } },
   { fromMinute: 6, rate: 3.4, weights: { shade: 5, harpy: 7, spartoi: 7, siren: 3, cyclops: 1 } },
-  { fromMinute: 8.5, rate: 3.9, weights: { harpy: 6, spartoi: 8, siren: 4, cyclops: 2 } },
-  { fromMinute: 11, rate: 4.5, weights: { harpy: 6, spartoi: 8, siren: 5, cyclops: 4 } },
-  { fromMinute: 14, rate: 5.2, weights: { harpy: 5, spartoi: 8, siren: 6, cyclops: 6 } },
-  { fromMinute: 18, rate: 6.0, weights: { spartoi: 8, siren: 7, cyclops: 8 } },
+  { fromMinute: 8.5, rate: 3.6, weights: { harpy: 6, spartoi: 8, siren: 4, cyclops: 2 } },
+  { fromMinute: 11, rate: 4.1, weights: { harpy: 6, spartoi: 8, siren: 5, cyclops: 4 } },
+  { fromMinute: 14, rate: 4.7, weights: { harpy: 5, spartoi: 8, siren: 6, cyclops: 6 } },
+  { fromMinute: 18, rate: 5.4, weights: { spartoi: 8, siren: 7, cyclops: 8 } },
 ];
 
 /** Bosses interrupt the wave table at fixed times. */

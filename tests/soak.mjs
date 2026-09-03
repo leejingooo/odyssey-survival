@@ -15,8 +15,8 @@ const MINUTES = Number(process.env.MINUTES ?? 25);
 const RICH_SAVE = {
   version: 1,
   gold: 999999,
-  // Every Star Chart upgrade maxed, so three gods can bless one voyage.
-  starChart: {
+  // Every permanent upgrade maxed, so three gods can bless one voyage.
+  permanent: {
     boonSlots: 2,
     vitality: 5,
     might: 5,
@@ -29,7 +29,18 @@ const RICH_SAVE = {
   },
   unlockedHeroes: ['odysseus', 'achilles', 'sisyphus', 'thanatos'],
   // The full pantheon, so the soak exercises every boon pool.
-  unlockedGods: ['hades', 'aphrodite', 'zeus', 'dionysus', 'artemis', 'demeter'],
+  unlockedGods: [
+    'hades',
+    'apollo',
+    'aphrodite',
+    'hephaestus',
+    'zeus',
+    'hestia',
+    'dionysus',
+    'hera',
+    'artemis',
+    'demeter',
+  ],
   lastHero: 'odysseus',
   locale: 'en',
   sfx: false,

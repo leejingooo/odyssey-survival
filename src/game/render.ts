@@ -38,7 +38,10 @@ export function drawRun(run: Run, r: Renderer, wallTime: number): void {
   drawPlayer(ctx, run, wallTime);
 
   for (const proj of run.projectiles) if (visible(proj.x, proj.y)) drawProjectile(ctx, proj);
-  for (const orb of run.orbiters) drawScythe(ctx, orb);
+  for (const orb of run.orbiters) {
+    if (orb.kind === 'automaton') drawAutomaton(ctx, orb);
+    else drawScythe(ctx, orb);
+  }
   for (const fx of run.vfx) if (visible(fx.x, fx.y)) drawVfx(ctx, fx);
 
   drawChestArrows(ctx, run, r);
@@ -271,7 +274,9 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
   let fill = e.def.color;
   if (s.charmTime > 0) fill = '#e072b4';
   else if (frozen) fill = mix(e.def.color, s.frozenKind === 'ice' ? '#bff0ff' : '#7fbf5f', 0.55);
+  else if (s.burnTime > 0) fill = mix(e.def.color, '#ff8a3c', 0.45);
   else if (s.bleedTime > 0) fill = mix(e.def.color, '#d43f43', 0.35);
+  else if (s.confuseTime > 0) fill = mix(e.def.color, '#a03060', 0.4);
   else if (s.slowTime > 0) fill = mix(e.def.color, '#3fa9d8', 0.35);
   if (e.flash > 0.05) fill = '#ffffff';
 
@@ -304,6 +309,28 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
       break;
   }
 
+  if (s.markTime > 0) {
+    // Hera's brand: a ring that says "hit this one".
+    ctx.strokeStyle = '#dcc4ff';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.arc(0, 0, e.radius + 7, 0, TAU);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (s.burnTime > 0) {
+    ctx.globalAlpha = 0.75;
+    ctx.fillStyle = '#ffb15c';
+    for (let i = 0; i < 3; i++) {
+      const angle = e.anim * 4 + (TAU * i) / 3;
+      const lift = ((e.anim * 40 + i * 9) % 14) - 4;
+      ctx.beginPath();
+      ctx.arc(Math.cos(angle) * e.radius * 0.6, -lift, 2.2, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
   if (s.doomTime > 0) {
     ctx.strokeStyle = '#b79aff';
     ctx.lineWidth = 2;
@@ -622,14 +649,15 @@ function drawPickup(ctx: CanvasRenderingContext2D, pickup: Pickup, wallTime: num
 
 function drawPuddle(ctx: CanvasRenderingContext2D, puddle: Puddle): void {
   const fade = Math.min(1, puddle.life / 1.2);
+  const ember = puddle.kind === 'ember';
   ctx.save();
-  ctx.globalAlpha = 0.3 * fade;
-  ctx.fillStyle = '#2f8fc0';
+  ctx.globalAlpha = (ember ? 0.38 : 0.3) * fade;
+  ctx.fillStyle = ember ? '#e0663a' : '#2f8fc0';
   ctx.beginPath();
   ctx.ellipse(puddle.x, puddle.y, puddle.radius, puddle.radius * 0.72, 0, 0, TAU);
   ctx.fill();
-  ctx.globalAlpha = 0.6 * fade;
-  ctx.strokeStyle = '#9fe8ff';
+  ctx.globalAlpha = 0.65 * fade;
+  ctx.strokeStyle = ember ? '#ffc98a' : '#9fe8ff';
   ctx.lineWidth = 1.5;
   ctx.stroke();
   ctx.restore();
@@ -700,6 +728,34 @@ function drawScythe(ctx: CanvasRenderingContext2D, orb: Projectile): void {
   ctx.beginPath();
   ctx.arc(0, 0, orb.radius, -0.9, 0.9);
   ctx.stroke();
+  ctx.restore();
+}
+
+/** Hephaestus' construct: a bronze cog that grinds whatever it touches. */
+function drawAutomaton(ctx: CanvasRenderingContext2D, orb: Projectile): void {
+  ctx.save();
+  ctx.translate(orb.x, orb.y);
+  ctx.rotate(orb.angle);
+  ctx.fillStyle = orb.color;
+  ctx.strokeStyle = '#5a2c14';
+  ctx.lineWidth = 1.6;
+  const teeth = 6;
+  ctx.beginPath();
+  for (let i = 0; i < teeth * 2; i++) {
+    const radius = i % 2 === 0 ? orb.radius : orb.radius * 0.66;
+    const angle = (TAU * i) / (teeth * 2);
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#2a1608';
+  ctx.beginPath();
+  ctx.arc(0, 0, orb.radius * 0.28, 0, TAU);
+  ctx.fill();
   ctx.restore();
 }
 
@@ -783,6 +839,24 @@ function drawVfx(ctx: CanvasRenderingContext2D, fx: Vfx): void {
       ctx.lineTo(-5, 6);
       ctx.closePath();
       ctx.fill();
+      break;
+    }
+    case 'beam': {
+      ctx.globalAlpha = fade;
+      const grad = ctx.createLinearGradient(fx.x, fx.y, fx.x2, fx.y2);
+      grad.addColorStop(0, fx.color);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.strokeStyle = grad;
+      ctx.lineCap = 'round';
+      ctx.lineWidth = fx.radius * 2 * (0.4 + fade * 0.6);
+      ctx.beginPath();
+      ctx.moveTo(fx.x, fx.y);
+      ctx.lineTo(fx.x2, fx.y2);
+      ctx.stroke();
+      ctx.globalAlpha = fade * 0.9;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1, fx.radius * 0.35 * fade);
+      ctx.stroke();
       break;
     }
     case 'spark': {
