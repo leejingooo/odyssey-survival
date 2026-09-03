@@ -109,6 +109,27 @@ function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): 
   const trim = p.hurtFlash > 0.2 ? '#ffffff' : hero.accent;
 
   ctx.rotate(lean);
+  // Feet alternate with the simulation walk cycle; this stays legible even
+  // when the upper body is covered by attack effects.
+  const stride = Math.sin(p.walkPhase) * 2.6;
+  ctx.strokeStyle = '#090711';
+  ctx.lineWidth = 3.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-3, 8);
+  ctx.lineTo(-3 + stride, 13);
+  ctx.moveTo(3, 8);
+  ctx.lineTo(3 - stride, 13);
+  ctx.stroke();
+  // A darker back fold gives the tiny sprite volume instead of a flat token.
+  ctx.fillStyle = mix(hero.color, '#080611', 0.46);
+  ctx.beginPath();
+  ctx.moveTo(-5, -5);
+  ctx.quadraticCurveTo(-11, 5, -8, 12);
+  ctx.lineTo(0, 8);
+  ctx.lineTo(0, -5);
+  ctx.closePath();
+  ctx.fill();
   // Cloak: a tapered body that reads as a standing figure at 20 pixels tall.
   ctx.fillStyle = skin;
   ctx.strokeStyle = '#0a0812';
