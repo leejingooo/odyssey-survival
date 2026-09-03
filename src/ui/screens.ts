@@ -514,6 +514,19 @@ export function settingsScreen(ctx: UiContext): HTMLElement {
       toggle(t('ui.sound'), save.sfx, (next) => (save.sfx = next)),
       toggle(t('ui.music'), save.music, (next) => (save.music = next)),
       toggle(t('ui.haptics'), save.haptics, (next) => (save.haptics = next)),
+      el('div', { class: 'toggle-row' }, [
+        el('span', { text: t('ui.hapticStrength') }),
+        button(
+          save.hapticStrength === 'strong' ? t('ui.hapticStrong') : t('ui.hapticLight'),
+          () => {
+            save.hapticStrength = save.hapticStrength === 'strong' ? 'light' : 'strong';
+            ctx.commit();
+            ctx.rerender();
+          },
+          'btn btn--ghost',
+        ),
+      ]),
+      toggle(t('ui.reducedMotion'), save.reducedMotion, (next) => (save.reducedMotion = next)),
       el('div', { style: { height: '20px' } }),
       button(
         t('ui.reset'),

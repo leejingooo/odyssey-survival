@@ -16,6 +16,8 @@ export interface SaveData {
   sfx: boolean;
   music: boolean;
   haptics: boolean;
+  hapticStrength: 'light' | 'strong';
+  reducedMotion: boolean;
   stats: {
     runs: number;
     bestTimeSec: number;
@@ -45,6 +47,8 @@ function freshSave(): SaveData {
     sfx: true,
     music: true,
     haptics: true,
+    hapticStrength: 'light',
+    reducedMotion: false,
     stats: { runs: 0, bestTimeSec: 0, bestLevel: 0, totalKills: 0 },
     iap: { removeAds: false, unlockAllHeroes: false },
     ads: { day: '', watched: 0 },

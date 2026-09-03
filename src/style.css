@@ -4,10 +4,9 @@
    ============================================================ */
 
 /*
- * Cinzel is bundled, not fetched: a packaged store build cannot count on the
- * network at first launch, and a title screen that falls back to Times looks
- * broken. Latin subset only — Hangul, kana and Han come from the system faces
- * below, which are good on every platform we ship to and cost nothing.
+ * Display Latin and Korean body fonts are bundled: a packaged store build
+ * cannot count on the network at first launch. Kana and Han still use the
+ * platform system faces below.
  */
 @font-face {
   font-family: 'Cinzel';

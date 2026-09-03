@@ -1,4 +1,7 @@
 import './style.css';
+import '@fontsource/noto-sans-kr/korean-400.css';
+import '@fontsource/noto-sans-kr/korean-600.css';
+import '@fontsource/noto-sans-kr/korean-700.css';
 import { App } from './app';
 
 const canvas = document.getElementById('game-canvas') as HTMLCanvasElement | null;

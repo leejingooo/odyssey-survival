@@ -50,12 +50,7 @@ export function drawRun(run: Run, r: Renderer, wallTime: number): void {
 
 // ------------------------------------------------------------------ player
 
-/**
- * Heroes are drawn as a hooded body with a weapon held in hand, animated from
- * two clocks the simulation already keeps: `walkPhase` (a bob while moving) and
- * `attackProgress` (0 right after a swing, 1 when the next one is ready). That
- * is enough for the eye to read weight and rhythm without a single sprite.
- */
+/** Vector sprites assembled on the canvas, with a silhouette unique to each hero. */
 function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): void {
   const p = run.player;
   const hero = run.hero;
@@ -137,12 +132,80 @@ function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): 
   ctx.beginPath();
   ctx.arc(0, -10.5, 5.4, Math.PI, 0);
   ctx.fill();
+  drawHeroDetails(ctx, hero.id, skin, trim);
   ctx.rotate(-lean);
 
   drawWeapon(ctx, hero.weapon, p.facing, swing, skin, trim);
   ctx.restore();
 
   drawShields(ctx, p.x, p.y + bob, p.shields, wallTime);
+}
+
+/** Small high-contrast details keep every hero readable in a crowded phone screen. */
+function drawHeroDetails(
+  ctx: CanvasRenderingContext2D,
+  heroId: string,
+  color: string,
+  accent: string,
+): void {
+  ctx.save();
+  ctx.strokeStyle = '#0a0812';
+  ctx.fillStyle = accent;
+  ctx.lineWidth = 1.2;
+  if (heroId === 'odysseus') {
+    // Traveller's blue shoulder mantle and golden cloak clasp.
+    ctx.fillStyle = '#315d86';
+    ctx.beginPath();
+    ctx.moveTo(-6, -5);
+    ctx.quadraticCurveTo(0, -1, 6, -5);
+    ctx.lineTo(5, 1);
+    ctx.quadraticCurveTo(0, -2, -5, 1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(0, -4, 1.6, 0, TAU);
+    ctx.fill();
+  } else if (heroId === 'achilles') {
+    // The tall crest makes Achilles unmistakable even behind a mob.
+    ctx.beginPath();
+    ctx.moveTo(-1.8, -15);
+    ctx.quadraticCurveTo(1, -22, 5, -18);
+    ctx.lineTo(2, -13);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#a9363d';
+    ctx.fillRect(-5.5, -8, 11, 2.5);
+  } else if (heroId === 'sisyphus') {
+    ctx.fillStyle = '#5b6470';
+    ctx.fillRect(-5, -12, 10, 2.2);
+    ctx.strokeStyle = accent;
+    ctx.beginPath();
+    ctx.moveTo(-6, 1);
+    ctx.lineTo(6, 5);
+    ctx.stroke();
+  } else if (heroId === 'thanatos') {
+    ctx.fillStyle = '#171124';
+    ctx.beginPath();
+    ctx.arc(0, -9, 4, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(-1.7, -9.5, 0.9, 0, TAU);
+    ctx.arc(1.7, -9.5, 0.9, 0, TAU);
+    ctx.fill();
+    // Wing-like shroud fins echo classical depictions of Thanatos.
+    ctx.fillStyle = accent;
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * 5, -4);
+      ctx.lineTo(side * 12, -10);
+      ctx.lineTo(side * 8, 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
 
 /** The held weapon, rotated to the hero's heading and thrust on the swing. */
@@ -271,6 +334,8 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
   ctx.fill();
   ctx.globalAlpha = 1;
 
+  if (e.isBoss) drawBossTelegraph(ctx, e);
+
   let fill = e.def.color;
   if (s.charmTime > 0) fill = '#e072b4';
   else if (frozen) fill = mix(e.def.color, s.frozenKind === 'ice' ? '#bff0ff' : '#7fbf5f', 0.55);
@@ -354,6 +419,41 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
       '#d84a52',
     );
   }
+}
+
+/** Boss attacks announce themselves before damage lands, not only with a HUD banner. */
+function drawBossTelegraph(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const charging = e.def.behavior === 'charger' && (e.chargeTime > 0 || e.chargeCd < 0.6);
+  const volley = e.def.behavior === 'shooter' && e.shootCd < 0.55;
+  if (!charging && !volley) return;
+
+  ctx.save();
+  const pulse = 0.45 + Math.sin(e.anim * 15) * 0.2;
+  ctx.globalAlpha = pulse;
+  ctx.strokeStyle = '#ffcf70';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([7, 5]);
+  ctx.beginPath();
+  ctx.arc(0, 0, e.radius + 10, 0, TAU);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  if (e.chargeTime > 0) {
+    ctx.rotate(Math.atan2(e.chargeY, e.chargeX));
+    ctx.fillStyle = 'rgba(255, 95, 85, 0.35)';
+    ctx.fillRect(e.radius, -7, 220, 14);
+  } else if (volley) {
+    ctx.rotate(Math.atan2(e.chargeY, e.chargeX));
+    ctx.strokeStyle = 'rgba(255, 207, 112, 0.7)';
+    for (const offset of [-0.24, 0, 0.24]) {
+      ctx.rotate(offset);
+      ctx.beginPath();
+      ctx.moveTo(e.radius, 0);
+      ctx.lineTo(e.radius + 75, 0);
+      ctx.stroke();
+      ctx.rotate(-offset);
+    }
+  }
+  ctx.restore();
 }
 
 /** Hooded wisp: a cowl over a tattered hem that ripples as it drifts. */
