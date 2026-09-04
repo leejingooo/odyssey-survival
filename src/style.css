@@ -4,10 +4,9 @@
    ============================================================ */
 
 /*
- * Cinzel is bundled, not fetched: a packaged store build cannot count on the
- * network at first launch, and a title screen that falls back to Times looks
- * broken. Latin subset only — Hangul, kana and Han come from the system faces
- * below, which are good on every platform we ship to and cost nothing.
+ * Display Latin and Korean body fonts are bundled: a packaged store build
+ * cannot count on the network at first launch. Kana and Han still use the
+ * platform system faces below.
  */
 @font-face {
   font-family: 'Cinzel';
@@ -28,6 +27,7 @@
   --blood: #c8434b;
   --aegean: #47b7d6;
   --shade: #7a5cc4;
+  --font-display: 'Cinzel', 'Noto Sans KR', serif;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -95,7 +95,9 @@ body {
 }
 
 .screen--menu {
-  background: radial-gradient(120% 90% at 50% 0%, #1d1a3a 0%, #0b0a17 55%, #05040c 100%);
+  background:
+    linear-gradient(90deg, transparent 49.7%, rgba(232, 182, 76, 0.055) 50%, transparent 50.3%),
+    radial-gradient(100% 65% at 50% 0%, #242044 0%, #0b0a17 62%, #05040c 100%);
 }
 
 .screen--overlay {
@@ -123,7 +125,17 @@ body {
   text-align: center;
   margin: 0;
   color: var(--gold);
-  text-shadow: 0 0 24px rgba(232, 182, 76, 0.35);
+  text-shadow: 0 2px 0 #4e3512;
+}
+
+.title-art {
+  display: block;
+  width: min(100%, 420px);
+  max-height: 28vh;
+  object-fit: contain;
+  border: 1px solid rgba(232, 182, 76, 0.42);
+  border-radius: 2px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.38);
 }
 
 .subtitle {
@@ -163,7 +175,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   padding: 14px 18px;
-  border-radius: 12px;
+  border-radius: 4px;
   cursor: pointer;
   transition:
     transform 0.08s ease,
@@ -177,7 +189,7 @@ body {
 }
 
 .btn--primary {
-  background: linear-gradient(180deg, #e8b64c, #b8801f);
+  background: #d9a73f;
   color: #241704;
   border-color: #f4d68d;
   font-size: 19px;
@@ -245,8 +257,8 @@ body {
 .hero-card {
   position: relative;
   border: 1px solid rgba(236, 230, 216, 0.16);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.01));
+  border-radius: 4px;
+  background: #100e20;
   padding: 12px;
   text-align: left;
   cursor: pointer;
@@ -263,9 +275,7 @@ body {
 
 .hero-card.is-selected {
   border-color: var(--gold);
-  box-shadow:
-    0 0 0 1px var(--gold),
-    0 0 22px rgba(232, 182, 76, 0.22) inset;
+  box-shadow: inset 0 -3px 0 var(--gold);
 }
 
 .hero-card.is-locked {
@@ -343,13 +353,11 @@ body {
   align-items: flex-start;
   text-align: left;
   width: 100%;
-  border-radius: 14px;
+  border-radius: 4px;
   border: 1px solid rgba(236, 230, 216, 0.14);
   border-left: 6px solid var(--rarity, var(--accent));
-  box-shadow: inset 14px 0 22px -18px var(--rarity, var(--accent));
-  background:
-    linear-gradient(105deg, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.015));
+  box-shadow: inset 12px 0 24px -22px var(--rarity, var(--accent));
+  background: #11101e;
   padding: 12px 13px;
   color: inherit;
   font-family: inherit;
@@ -377,50 +385,12 @@ body {
   --rarity: var(--rarity-legendary);
 }
 
-/* Rarity is felt before it is read: epics glow, legendaries also sweep. */
+/* Rarity is carried by the frame, without animated gloss. */
 .card--epic {
-  box-shadow: 0 0 22px -6px var(--rarity-epic);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rarity-epic) 30%, transparent);
 }
 .card--legendary {
-  box-shadow: 0 0 30px -5px var(--rarity-legendary);
-}
-
-.card--epic::after,
-.card--legendary::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    100deg,
-    transparent 35%,
-    color-mix(in srgb, var(--rarity) 34%, transparent) 50%,
-    transparent 65%
-  );
-  transform: translateX(-120%);
-  animation: sheen 3.4s ease-in-out infinite;
-}
-
-.card--legendary::after {
-  animation-duration: 2.4s;
-}
-
-@keyframes sheen {
-  0% {
-    transform: translateX(-120%);
-  }
-  55%,
-  100% {
-    transform: translateX(120%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .card--epic::after,
-  .card--legendary::after {
-    animation: none;
-    opacity: 0;
-  }
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rarity-legendary) 45%, transparent);
 }
 
 .card--swap {
@@ -431,7 +401,7 @@ body {
   flex: 0 0 46px;
   width: 46px;
   height: 46px;
-  border-radius: 12px;
+  border-radius: 4px;
   display: grid;
   place-items: center;
   font-size: 24px;
@@ -451,7 +421,6 @@ body {
   font-weight: 800;
   letter-spacing: 0.1em;
   color: var(--accent);
-  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 55%, transparent);
   margin-bottom: 1px;
 }
 
@@ -465,11 +434,19 @@ body {
 }
 
 .card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 6px;
-  margin: 6px 0 6px;
+  margin: 5px 0 7px;
+  color: var(--marble-dim);
+  font-size: 10.5px;
+  letter-spacing: 0.045em;
+}
+.card__meta--rare {
+  color: var(--rarity-rare);
+}
+.card__meta--epic {
+  color: var(--rarity-epic);
+}
+.card__meta--legendary {
+  color: var(--rarity-legendary);
 }
 
 .chip {
@@ -533,7 +510,7 @@ body {
   max-width: 520px;
   margin: 4px auto 0;
   border: 1px solid rgba(236, 230, 216, 0.16);
-  border-radius: 12px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.03);
   padding: 11px 13px;
 }
@@ -628,7 +605,7 @@ body {
 
 .row {
   border: 1px solid rgba(236, 230, 216, 0.14);
-  border-radius: 12px;
+  border-radius: 4px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.03);
 }
@@ -685,7 +662,7 @@ body {
   width: 46px;
   height: 46px;
   flex: 0 0 46px;
-  border-radius: 11px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
   font-size: 24px;
@@ -718,9 +695,8 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold);
-  border: 1px solid var(--gold-dim);
-  border-radius: 999px;
-  padding: 5px 10px;
+  border-bottom: 1px solid var(--gold-dim);
+  padding: 4px 0;
   white-space: nowrap;
 }
 

@@ -64,6 +64,8 @@ export class App {
     audio.sfxEnabled = this.save.sfx;
     audio.musicEnabled = this.save.music;
     haptics.enabled = this.save.haptics;
+    haptics.strength = this.save.hapticStrength;
+    this.renderer.reducedMotion = this.save.reducedMotion;
 
     this.money = new Monetization(
       new StubAdProvider(ui),
@@ -243,6 +245,8 @@ export class App {
   private commit(): void {
     audio.sfxEnabled = this.save.sfx;
     haptics.enabled = this.save.haptics;
+    haptics.strength = this.save.hapticStrength;
+    this.renderer.reducedMotion = this.save.reducedMotion;
     if (audio.musicEnabled !== this.save.music) audio.setMusicEnabled(this.save.music);
     writeSave(this.save);
   }
@@ -365,8 +369,9 @@ export class App {
           haptics.play('reward');
         },
         onDeath: () => this.showDeath(),
-        onAttackHit: () => haptics.play('attack'),
+        onAttackHit: (critical) => haptics.play(critical ? 'critical' : 'attack'),
         onPlayerHit: (blocked) => haptics.play(blocked ? 'blocked' : 'hurt'),
+        onBossAttack: () => haptics.play('warning'),
       },
     });
 

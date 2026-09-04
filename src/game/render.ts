@@ -109,6 +109,27 @@ function drawPlayer(ctx: CanvasRenderingContext2D, run: Run, wallTime: number): 
   const trim = p.hurtFlash > 0.2 ? '#ffffff' : hero.accent;
 
   ctx.rotate(lean);
+  // Feet alternate with the simulation walk cycle; this stays legible even
+  // when the upper body is covered by attack effects.
+  const stride = Math.sin(p.walkPhase) * 2.6;
+  ctx.strokeStyle = '#090711';
+  ctx.lineWidth = 3.2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-3, 8);
+  ctx.lineTo(-3 + stride, 13);
+  ctx.moveTo(3, 8);
+  ctx.lineTo(3 - stride, 13);
+  ctx.stroke();
+  // A darker back fold gives the tiny sprite volume instead of a flat token.
+  ctx.fillStyle = mix(hero.color, '#080611', 0.46);
+  ctx.beginPath();
+  ctx.moveTo(-5, -5);
+  ctx.quadraticCurveTo(-11, 5, -8, 12);
+  ctx.lineTo(0, 8);
+  ctx.lineTo(0, -5);
+  ctx.closePath();
+  ctx.fill();
   // Cloak: a tapered body that reads as a standing figure at 20 pixels tall.
   ctx.fillStyle = skin;
   ctx.strokeStyle = '#0a0812';
@@ -334,6 +355,8 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
   ctx.fill();
   ctx.globalAlpha = 1;
 
+  if (e.isBoss) drawBossTelegraph(ctx, e);
+
   let fill = e.def.color;
   if (s.charmTime > 0) fill = '#e072b4';
   else if (frozen) fill = mix(e.def.color, s.frozenKind === 'ice' ? '#bff0ff' : '#7fbf5f', 0.55);
@@ -417,6 +440,41 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
       '#d84a52',
     );
   }
+}
+
+/** Boss attacks announce themselves before damage lands, not only with a HUD banner. */
+function drawBossTelegraph(ctx: CanvasRenderingContext2D, e: Enemy): void {
+  const charging = e.def.behavior === 'charger' && (e.chargeTime > 0 || e.chargeCd < 0.6);
+  const volley = e.def.behavior === 'shooter' && e.shootCd < 0.55;
+  if (!charging && !volley) return;
+
+  ctx.save();
+  const pulse = 0.45 + Math.sin(e.anim * 15) * 0.2;
+  ctx.globalAlpha = pulse;
+  ctx.strokeStyle = '#ffcf70';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([7, 5]);
+  ctx.beginPath();
+  ctx.arc(0, 0, e.radius + 10, 0, TAU);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  if (e.chargeTime > 0) {
+    ctx.rotate(Math.atan2(e.chargeY, e.chargeX));
+    ctx.fillStyle = 'rgba(255, 95, 85, 0.35)';
+    ctx.fillRect(e.radius, -7, 220, 14);
+  } else if (volley) {
+    ctx.rotate(Math.atan2(e.chargeY, e.chargeX));
+    ctx.strokeStyle = 'rgba(255, 207, 112, 0.7)';
+    for (const offset of [-0.24, 0, 0.24]) {
+      ctx.rotate(offset);
+      ctx.beginPath();
+      ctx.moveTo(e.radius, 0);
+      ctx.lineTo(e.radius + 75, 0);
+      ctx.stroke();
+      ctx.rotate(-offset);
+    }
+  }
+  ctx.restore();
 }
 
 /** Hooded wisp: a cowl over a tattered hem that ripples as it drifts. */

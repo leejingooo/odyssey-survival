@@ -16,6 +16,7 @@
     "test:soak": "node tests/soak.mjs",
     "format": "prettier --write \"src/**/*.{ts,css}\" \"tests/*.mjs\" \"*.{ts,json,md}\"",
     "test:flows": "node tests/flows.mjs",
+    "test:korean": "node scripts/check-korean.mjs",
     "codex": "node scripts/build-codex.mjs"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
   },
   "dependencies": {
     "@capacitor/core": "^6.2.2",
-    "@capacitor/haptics": "^6.0.3"
+    "@capacitor/haptics": "^6.0.3",
+    "@fontsource/noto-sans-kr": "^5.3.0"
   }
 }

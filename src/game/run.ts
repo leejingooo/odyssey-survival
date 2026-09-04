@@ -66,6 +66,8 @@ export interface RunEvents {
   onAttackHit(critical: boolean): void;
   /** Damage received, or a shield charge spent to stop it. */
   onPlayerHit(blocked: boolean): void;
+  /** A boss has committed to a telegraphed signature attack. */
+  onBossAttack(): void;
 }
 
 // Past this the screen stops reading as a crowd and starts reading as a wall,
@@ -1423,15 +1425,23 @@ export class Run {
               e.chargeTime = 0.75;
               e.chargeX = dx / len;
               e.chargeY = dy / len;
+              if (e.isBoss) this.events.onBossAttack();
             }
           }
           break;
         }
         case 'shooter': {
           e.shootCd -= dt;
+          e.chargeX = dx / len;
+          e.chargeY = dy / len;
           if (e.shootCd <= 0 && !charmed && len < 420) {
             e.shootCd = (e.def.shootInterval ?? 2) / (weakenMult || 1);
-            this.spawnEnemyShot(e, dx / len, dy / len);
+            const angle = Math.atan2(dy, dx);
+            const spread = e.def.id === 'cerberus' ? [-0.24, 0, 0.24] : [0];
+            for (const offset of spread) {
+              this.spawnEnemyShot(e, Math.cos(angle + offset), Math.sin(angle + offset));
+            }
+            if (e.isBoss) this.events.onBossAttack();
           }
           // Keep their distance so they stay a ranged threat.
           if (len < 150) {

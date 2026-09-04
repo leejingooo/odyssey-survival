@@ -40,7 +40,7 @@ import {
   type LocaleId,
 } from '../i18n';
 import { button, clear, el } from './dom';
-import { heroPortrait } from './glyph';
+import { heroPortrait, titleArtwork } from './glyph';
 
 export interface UiContext {
   save: SaveData;
@@ -102,6 +102,7 @@ export function titleScreen(ctx: UiContext): HTMLElement {
   return el('div', { class: 'screen screen--menu fade-in' }, [
     el('div', { class: 'topbar' }, [el('span'), el('span'), goldChip(save)]),
     el('div', { class: 'center-col' }, [
+      titleArtwork(),
       el('h1', { class: 'title', text: t('menu.title') }),
       el('p', { class: 'subtitle', text: t('menu.subtitle') }),
       el('div', { class: 'narrative' }, [
@@ -514,6 +515,19 @@ export function settingsScreen(ctx: UiContext): HTMLElement {
       toggle(t('ui.sound'), save.sfx, (next) => (save.sfx = next)),
       toggle(t('ui.music'), save.music, (next) => (save.music = next)),
       toggle(t('ui.haptics'), save.haptics, (next) => (save.haptics = next)),
+      el('div', { class: 'toggle-row' }, [
+        el('span', { text: t('ui.hapticStrength') }),
+        button(
+          save.hapticStrength === 'strong' ? t('ui.hapticStrong') : t('ui.hapticLight'),
+          () => {
+            save.hapticStrength = save.hapticStrength === 'strong' ? 'light' : 'strong';
+            ctx.commit();
+            ctx.rerender();
+          },
+          'btn btn--ghost',
+        ),
+      ]),
+      toggle(t('ui.reducedMotion'), save.reducedMotion, (next) => (save.reducedMotion = next)),
       el('div', { style: { height: '20px' } }),
       button(
         t('ui.reset'),
@@ -570,32 +584,26 @@ function offerCard(offer: Offer, run: Run, onPick: (offer: Offer) => void): HTML
     style: { '--accent': accent } as Record<string, string>,
   });
 
-  const meta = el('div', { class: 'card__meta' }, [
-    el('span', { class: `chip chip--${card.rarity}`, text: t(`rarity.${card.rarity}` as DictKey) }),
-    el('span', { class: 'chip', text: effectLabel(card.effect) }),
-    el('span', {
-      class: 'chip chip--rank',
-      text: level === 1 ? t('card.newLevel') : t('card.upgradeTo', level),
-    }),
-    card.temporaryLevels
-      ? el('span', {
-          class: 'chip chip--temp',
-          text: t('card.temporary', card.temporaryLevels),
-        })
-      : null,
-  ]);
+  const metaText = [
+    t(`rarity.${card.rarity}` as DictKey),
+    effectLabel(card.effect),
+    level === 1 ? t('card.newLevel') : t('card.upgradeTo', level),
+    card.temporaryLevels ? t('card.temporary', card.temporaryLevels) : '',
+  ]
+    .filter(Boolean)
+    .join('  ·  ');
 
   node.append(
     el('div', { class: 'card__emblem', text: emblem }),
     el('div', { class: 'card__body' }, [
       el('div', { class: 'card__source', text: source }),
       el('div', { class: 'card__name', text: loc(card.name) }),
-      meta,
+      el('div', { class: `card__meta card__meta--${card.rarity}`, text: metaText }),
       el('div', { class: 'card__desc', text: loc(card.desc, ...card.values(level)) }),
       offer.replaces
         ? el('div', { class: 'card__swap' }, [
-            el('span', { class: 'chip chip--warn', text: t('card.swap') }),
-            document.createTextNode(' ' + t('card.swapDesc', godName(offer.replaces))),
+            el('strong', { text: `${t('card.swap')} — ` }),
+            document.createTextNode(t('card.swapDesc', godName(offer.replaces))),
           ])
         : null,
     ]),

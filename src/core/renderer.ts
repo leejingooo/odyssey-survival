@@ -20,6 +20,7 @@ export class Renderer {
   dpr = 1;
 
   camera: Camera = { x: 0, y: 0, zoom: 1 };
+  reducedMotion = false;
 
   private shake = 0;
   private shakeX = 0;
@@ -53,12 +54,13 @@ export class Renderer {
   }
 
   addShake(amount: number): void {
+    if (this.reducedMotion) return;
     this.shake = Math.min(this.shake + amount, 26);
   }
 
   flash(color: string, alpha = 0.35): void {
     this.flashColor = color;
-    this.flashAlpha = Math.max(this.flashAlpha, alpha);
+    this.flashAlpha = Math.max(this.flashAlpha, this.reducedMotion ? Math.min(alpha, 0.06) : alpha);
   }
 
   update(dt: number): void {
