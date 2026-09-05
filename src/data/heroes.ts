@@ -65,7 +65,8 @@ export const HEROES: Record<HeroId, HeroDef> = {
     mech: { knockback: 55 },
     weaponBase: {
       damage: 24,
-      cooldown: 0.62,
+      // Deliberate, readable blows instead of the former rapid strobe of sweeps.
+      cooldown: 0.78,
       range: 92,
       speed: 0,
       count: 1,
@@ -81,15 +82,15 @@ export const HEROES: Record<HeroId, HeroDef> = {
     color: '#9aa4b2',
     accent: '#e2e8f0',
     stats: { maxHp: 120, moveSpeed: 108, armor: 1 },
-    mech: { splashRadius: 52, splashDamage: 0.55, knockback: 22 },
+    mech: { splashRadius: 72, splashDamage: 0.9, knockback: 30 },
     weaponBase: {
       damage: 30,
       cooldown: 0.95,
       range: 250,
-      speed: 205,
+      speed: 285,
       count: 1,
       size: 13,
-      pierce: 2,
+      pierce: 0,
     },
   },
   thanatos: {

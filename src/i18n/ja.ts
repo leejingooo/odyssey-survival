@@ -63,7 +63,8 @@ export const ja: Dict = {
 
   'hero.sisyphus.name': 'シーシュポス',
   'hero.sisyphus.role': '投擲手',
-  'hero.sisyphus.desc': '重い岩を転がして投げる。遅いが貫通し、着弾で範囲ダメージ。',
+  'hero.sisyphus.desc':
+    '岩を砲弾のように高く投げる。着弾中心は強烈で、爆心から離れるほど威力が落ちる。',
   'hero.sisyphus.weapon': '永遠の岩',
 
   'hero.thanatos.name': 'タナトス',
@@ -101,6 +102,9 @@ export const ja: Dict = {
   'card.newLevel': '新たな恩恵',
   'card.upgradeTo': '{0}段階へ',
   'card.reroll': '引き直す',
+  'card.rerollFree': '🎲 引き直す · 無料 {0}回',
+  'card.rerollGold': '🎲 引き直す · ◆ {0}',
+  'card.rerollGift': '🎲 運命の糸を得た！次の引き直しは無料。',
   'card.blocked': '神託の器が満杯です（{0}柱）',
 
   'rarity.common': 'コモン',
@@ -168,6 +172,12 @@ export const ja: Dict = {
   'enemy.siren': 'セイレーン',
   'enemy.minotaur': 'ミノタウロス',
   'enemy.cerberus': 'ケルベロス',
+  'enemy.satyr': 'サテュロス',
+  'enemy.gorgon': 'ゴルゴン',
+  'enemy.hoplite': 'ホプリタイ',
+  'enemy.chimera': 'キマイラ',
+  'enemy.hydra': 'ヒュドラ',
+  'enemy.talos': 'タロス',
   'enemy.boss': '{0} が現れた',
 
   'story.intro':
@@ -235,6 +245,23 @@ export const ja: Dict = {
   'effect.auto.help': '一定周期で勝手に発動する',
   'effect.passive.help': '常に適用される',
   'effect.trigger.help': '撃破時や被弾時に発動する',
+  'heroHint.odysseus.attack': '矢が命中した対象に適用される。',
+  'heroHint.odysseus.auto': '弓とは別に自動で発動する。',
+  'heroHint.odysseus.passive': '射手の能力を常時強化する。',
+  'heroHint.odysseus.trigger': '矢の命中または撃破を条件に発動する。',
+  'heroHint.achilles.attack': '剣の扇形範囲に入った敵すべてに適用される。',
+  'heroHint.achilles.auto': '剣撃とは別に自動で発動する。',
+  'heroHint.achilles.passive': '接近戦中は常に適用される。',
+  'heroHint.achilles.trigger': '剣撃の命中または近接撃破を条件に発動する。',
+  'heroHint.sisyphus.attack': '岩が着弾した際、爆発範囲内の敵に適用される。',
+  'heroHint.sisyphus.auto': '岩投げとは別に自動で発動する。',
+  'heroHint.sisyphus.passive': '砲弾と使い手を常時強化する。',
+  'heroHint.sisyphus.trigger': '着弾または爆発による撃破を条件に発動する。',
+  'heroHint.thanatos.attack': '死の帳の波動に触れた敵すべてに適用される。',
+  'heroHint.thanatos.auto': '帳の波動とは別に自動で発動する。',
+  'heroHint.thanatos.passive': '帳の内側では常に適用される。',
+  'heroHint.thanatos.trigger': '帳の命中または刈り取りを条件に発動する。',
+
   'slots.title': '神託の器',
   'slots.hint': '一度の航海で迎えられる神は{0}柱。永続強化で最大3柱まで増やせる。',
   'slots.full': '器が満ちた。新しい神を迎えるには、今の神をひとつ手放す必要がある。',

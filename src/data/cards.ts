@@ -1,6 +1,7 @@
 import type { LocalizedText } from '../i18n';
 import type { Loadout } from '../game/stats';
 import type { GodId } from './gods';
+import type { HeroId } from './heroes';
 
 export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
 export type CardKind = 'boon' | 'weapon' | 'perk';
@@ -22,6 +23,8 @@ export interface CardDef {
   effect: EffectKind;
   /** emblem shown on the card and in the run summary; gods use their own */
   icon?: string;
+  /** Heroes for whom this mechanic has no useful effect. */
+  unavailableFor?: readonly HeroId[];
   /**
    * Set on cards that wear off. The card is dropped this many level-ups after
    * it is taken, and the HUD counts the levels down while it is running.
@@ -30,6 +33,8 @@ export interface CardDef {
   name: LocalizedText;
   /** `{0}`, `{1}`… are filled from `values(level)` */
   desc: LocalizedText;
+  /** Optional weapon-specific clarification shown after the mechanical text. */
+  heroHint?: Partial<Record<HeroId, LocalizedText>>;
   values: (level: number) => (string | number)[];
   /**
    * Applies the FULL effect of owning this card at `level`. The run rebuilds
