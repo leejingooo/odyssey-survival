@@ -1,6 +1,19 @@
 import { t, type DictKey } from '../i18n';
 
-export type EnemyId = 'shade' | 'harpy' | 'spartoi' | 'siren' | 'cyclops' | 'minotaur' | 'cerberus';
+export type EnemyId =
+  | 'shade'
+  | 'harpy'
+  | 'spartoi'
+  | 'siren'
+  | 'cyclops'
+  | 'satyr'
+  | 'gorgon'
+  | 'hoplite'
+  | 'chimera'
+  | 'minotaur'
+  | 'cerberus'
+  | 'hydra'
+  | 'talos';
 
 export type EnemyBehavior = 'chase' | 'strafe' | 'charger' | 'shooter';
 
@@ -98,6 +111,63 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     chargeInterval: 4.2,
     chargeSpeed: 240,
   },
+  satyr: {
+    id: 'satyr',
+    hp: 24,
+    damage: 10,
+    speed: 96,
+    radius: 10,
+    xp: 3,
+    gold: 2,
+    color: '#80603d',
+    accent: '#d8b06d',
+    behavior: 'strafe',
+    knockbackResist: 0.12,
+  },
+  gorgon: {
+    id: 'gorgon',
+    hp: 58,
+    damage: 13,
+    speed: 36,
+    radius: 14,
+    xp: 6,
+    gold: 4,
+    color: '#47734f',
+    accent: '#a9df86',
+    behavior: 'shooter',
+    knockbackResist: 0.4,
+    shootInterval: 1.9,
+    projectileSpeed: 115,
+    projectileDamage: 15,
+  },
+  hoplite: {
+    id: 'hoplite',
+    hp: 88,
+    damage: 16,
+    speed: 48,
+    radius: 16,
+    xp: 7,
+    gold: 4,
+    color: '#9a783e',
+    accent: '#f0d184',
+    behavior: 'chase',
+    knockbackResist: 0.68,
+  },
+  chimera: {
+    id: 'chimera',
+    hp: 210,
+    damage: 23,
+    speed: 58,
+    radius: 24,
+    xp: 14,
+    gold: 9,
+    color: '#a84932',
+    accent: '#ffc06e',
+    behavior: 'charger',
+    knockbackResist: 0.78,
+    chargeInterval: 3.5,
+    chargeSpeed: 275,
+  },
   minotaur: {
     id: 'minotaur',
     hp: 1150,
@@ -131,6 +201,39 @@ export const ENEMIES: Record<EnemyId, EnemyDef> = {
     projectileSpeed: 165,
     projectileDamage: 16,
   },
+  hydra: {
+    id: 'hydra',
+    hp: 3200,
+    damage: 36,
+    speed: 40,
+    radius: 42,
+    xp: 340,
+    gold: 100,
+    color: '#32705b',
+    accent: '#8df0b5',
+    behavior: 'shooter',
+    knockbackResist: 0.97,
+    boss: true,
+    shootInterval: 1.25,
+    projectileSpeed: 150,
+    projectileDamage: 19,
+  },
+  talos: {
+    id: 'talos',
+    hp: 4200,
+    damage: 42,
+    speed: 45,
+    radius: 44,
+    xp: 420,
+    gold: 125,
+    color: '#9b572e',
+    accent: '#ffc16b',
+    behavior: 'charger',
+    knockbackResist: 0.99,
+    boss: true,
+    chargeInterval: 2.7,
+    chargeSpeed: 350,
+  },
 };
 
 export function enemyName(id: EnemyId): string {
@@ -150,21 +253,45 @@ export const WAVES: WaveDef[] = [
   { fromMinute: 0, rate: 1.1, weights: { shade: 10 } },
   { fromMinute: 1, rate: 1.8, weights: { shade: 10, harpy: 5 } },
   { fromMinute: 2.5, rate: 2.5, weights: { shade: 9, harpy: 7, spartoi: 3 } },
-  { fromMinute: 4, rate: 3.2, weights: { shade: 7, harpy: 7, spartoi: 5, siren: 2 } },
-  { fromMinute: 6, rate: 3.4, weights: { shade: 5, harpy: 7, spartoi: 7, siren: 3, cyclops: 1 } },
-  { fromMinute: 8.5, rate: 3.6, weights: { harpy: 6, spartoi: 8, siren: 4, cyclops: 2 } },
-  { fromMinute: 11, rate: 4.1, weights: { harpy: 6, spartoi: 8, siren: 5, cyclops: 4 } },
-  { fromMinute: 14, rate: 4.7, weights: { harpy: 5, spartoi: 8, siren: 6, cyclops: 6 } },
-  { fromMinute: 18, rate: 5.4, weights: { spartoi: 8, siren: 7, cyclops: 8 } },
+  { fromMinute: 4, rate: 3.2, weights: { shade: 7, harpy: 7, spartoi: 5, siren: 2, satyr: 3 } },
+  {
+    fromMinute: 6,
+    rate: 3.8,
+    weights: { shade: 5, harpy: 6, spartoi: 7, siren: 3, cyclops: 1, satyr: 4, gorgon: 2 },
+  },
+  {
+    fromMinute: 8.5,
+    rate: 4.6,
+    weights: { harpy: 5, spartoi: 7, siren: 4, cyclops: 2, satyr: 4, gorgon: 3, hoplite: 3 },
+  },
+  {
+    fromMinute: 10,
+    rate: 6.2,
+    weights: { harpy: 4, spartoi: 6, siren: 4, cyclops: 3, gorgon: 4, hoplite: 5, chimera: 1 },
+  },
+  {
+    fromMinute: 12,
+    rate: 8.5,
+    weights: { spartoi: 5, siren: 5, cyclops: 4, gorgon: 4, hoplite: 6, chimera: 2 },
+  },
+  {
+    fromMinute: 15,
+    rate: 11.5,
+    weights: { siren: 5, cyclops: 5, gorgon: 5, hoplite: 7, chimera: 3 },
+  },
+  { fromMinute: 18, rate: 15.5, weights: { cyclops: 6, gorgon: 5, hoplite: 8, chimera: 5 } },
 ];
 
 /** Bosses interrupt the wave table at fixed times. */
 export const BOSS_SCHEDULE: { atMinute: number; id: EnemyId }[] = [
-  { atMinute: 5, id: 'minotaur' },
-  { atMinute: 10, id: 'cerberus' },
+  { atMinute: 3, id: 'minotaur' },
+  { atMinute: 6, id: 'cerberus' },
+  { atMinute: 9, id: 'hydra' },
+  { atMinute: 12, id: 'talos' },
   { atMinute: 15, id: 'minotaur' },
-  { atMinute: 20, id: 'cerberus' },
-  { atMinute: 25, id: 'cerberus' },
+  { atMinute: 18, id: 'hydra' },
+  { atMinute: 21, id: 'cerberus' },
+  { atMinute: 24, id: 'talos' },
 ];
 
 export function waveAt(minutes: number): WaveDef {

@@ -104,6 +104,7 @@ export interface DrawOptions {
   maxGods: number;
   /** gods bought in the Pantheon; boons from anyone else never appear */
   availableGods: ReadonlySet<GodId>;
+  hero: HeroDef;
   count?: number;
 }
 
@@ -133,7 +134,7 @@ function leastInvestedGod(owned: ReadonlyMap<string, number>): GodId | undefined
  * the same three cards for the rest of the voyage.
  */
 export function drawOffers(opts: DrawOptions): Offer[] {
-  const { rng, pool, owned, luck, maxGods, availableGods } = opts;
+  const { rng, pool, owned, luck, maxGods, availableGods, hero } = opts;
   const count = opts.count ?? 3;
   const gods = ownedGods(owned);
   const hasAnyBoon = gods.size > 0;
@@ -141,6 +142,7 @@ export function drawOffers(opts: DrawOptions): Offer[] {
   const swapTarget = full ? leastInvestedGod(owned) : undefined;
 
   const candidates = pool.filter((card) => {
+    if (card.unavailableFor?.includes(hero.id)) return false;
     const level = owned.get(card.id) ?? 0;
     if (level >= card.maxLevel) return false;
     if (card.god) {

@@ -1,6 +1,7 @@
 import { L } from '../i18n';
 import { at, type CardDef } from './cards';
 import type { GodId } from './gods';
+import { ASPECT_BOONS } from './aspects';
 
 /**
  * Fifteen gods, three boons each. A boon is always tied to its god, and how
@@ -10,7 +11,7 @@ import type { GodId } from './gods';
  * Rarity is a promise about power, not about flavour: common boons are
  * reliable and modest, rare boons carry a build, epic boons define one.
  */
-export const BOONS: CardDef[] = [
+const SIGNATURE_BOONS: CardDef[] = [
   // =============================================================== 아레스
   {
     id: 'ares_bleed',
@@ -951,6 +952,9 @@ export const BOONS: CardDef[] = [
 ];
 
 /** Boons grouped by their god, for the Pantheon codex. */
+/** 45 signature boons plus 45 build-shaping aspects: six choices per god. */
+export const BOONS: CardDef[] = [...SIGNATURE_BOONS, ...ASPECT_BOONS];
+
 export const BOONS_BY_GOD: Record<GodId, CardDef[]> = BOONS.reduce(
   (acc, boon) => {
     const god = boon.god as GodId;

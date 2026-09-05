@@ -560,6 +560,13 @@ function effectLabel(effect: EffectKind): string {
   return t(`effect.${effect}` as DictKey);
 }
 
+const EFFECT_GLYPH: Record<EffectKind, string> = {
+  attack: '💥',
+  auto: '⏱️',
+  passive: '♾️',
+  trigger: '⚡',
+};
+
 /**
  * One offer. The god's emblem and colour lead, the boon name is the biggest
  * thing on the card, and rarity is carried by the frame rather than by a word
@@ -570,13 +577,18 @@ function offerCard(offer: Offer, run: Run, onPick: (offer: Offer) => void): HTML
   const level = (run.owned.get(card.id) ?? 0) + 1;
   const god = card.god ? GODS[card.god] : null;
   const accent = god ? god.color : card.kind === 'weapon' ? '#e8b64c' : '#b8d0a0';
-  const emblem = god ? god.emblem : (card.icon ?? '✦');
+  // Two-part sigil: the deity identifies the family, while the smaller
+  // mechanic glyph makes individual powers scannable without reading stats.
+  const emblem = god ? `${god.emblem}${EFFECT_GLYPH[card.effect]}` : (card.icon ?? '✦');
 
   const source = god
     ? godName(card.god as GodId)
     : card.kind === 'weapon'
       ? t('card.weapon')
       : t('card.perk');
+  const heroHint =
+    card.heroHint?.[run.hero.id] ??
+    (card.kind !== 'perk' ? t(`heroHint.${run.hero.id}.${card.effect}` as DictKey) : '');
 
   const node = el('button', {
     class: `card card--${card.rarity}${offer.replaces ? ' card--swap' : ''}`,
@@ -600,6 +612,24 @@ function offerCard(offer: Offer, run: Run, onPick: (offer: Offer) => void): HTML
       el('div', { class: 'card__name', text: loc(card.name) }),
       el('div', { class: `card__meta card__meta--${card.rarity}`, text: metaText }),
       el('div', { class: 'card__desc', text: loc(card.desc, ...card.values(level)) }),
+      heroHint
+        ? el('div', {
+            class: 'card__hero-hint',
+            text: `${heroWeaponName(run.hero.id)} · ${typeof heroHint === 'string' ? heroHint : loc(heroHint)}`,
+          })
+        : null,
+      card.id === 'atk_infuse'
+        ? el(
+            'div',
+            { class: 'card__infusions' },
+            [...run.godsHeld].map((godId) =>
+              el('div', {
+                class: 'card__infusion-row',
+                text: `${GODS[godId].emblem} ${godName(godId)} — ${loc(GODS[godId].infusion)}`,
+              }),
+            ),
+          )
+        : null,
       offer.replaces
         ? el('div', { class: 'card__swap' }, [
             el('strong', { text: `${t('card.swap')} — ` }),
@@ -616,6 +646,7 @@ export function cardScreen(
   choice: PendingChoice,
   run: Run,
   onPick: (offer: Offer) => void,
+  onReroll: (choice: PendingChoice) => void,
 ): HTMLElement {
   const heading =
     choice.source === 'levelup'
@@ -648,6 +679,13 @@ export function cardScreen(
       el('h2', { class: 'card-heading', text: heading.title }),
       el('p', { class: 'subtitle', text: heading.sub }),
       list,
+      button(
+        run.rerollTokens > 0
+          ? t('card.rerollFree', run.rerollTokens)
+          : t('card.rerollGold', run.rerollCost),
+        () => onReroll(choice),
+        'btn btn--ghost reroll-btn',
+      ),
       slotNote,
     ]),
   ]);

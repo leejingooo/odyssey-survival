@@ -13,6 +13,8 @@ const discouraged = [
   ['src/data/upgrades.ts', "L('날카로움'"],
   ['src/data/upgrades.ts', "L('먼 사냥'"],
   ['src/data/upgrades.ts', "L('급소 찌르기'"],
+  ['src/i18n/ko.ts', '바위를 굴려 던진다'],
+  ['src/data/perks.ts', '3번 레벨이 오르면'],
 ];
 
 for (const [file, phrase] of discouraged) {
@@ -21,7 +23,16 @@ for (const [file, phrase] of discouraged) {
 }
 
 const codex = readFileSync('docs/CODEX.md', 'utf8');
-for (const expected of ['무기 연마', '사거리 확장', '회심의 일격', '응징의 방패', '피바람']) {
+if (!codex.includes('축복 90종')) throw new Error('신의 축복은 정확히 90종이어야 함');
+for (const expected of [
+  '무기 연마',
+  '사거리 확장',
+  '회심의 일격',
+  '응징의 방패',
+  '피바람',
+  '전장의 권능',
+  '겨울의 의식',
+]) {
   if (!codex.includes(expected)) throw new Error(`docs/CODEX.md가 게임 데이터와 다름: ${expected}`);
 }
 

@@ -387,7 +387,21 @@ export class App {
     this.vibrate(10);
     const run = this.run;
     if (!run) return;
-    this.showOverlay(cardScreen(choice, run, (offer) => this.pickCard(offer)));
+    this.showOverlay(
+      cardScreen(
+        choice,
+        run,
+        (offer) => this.pickCard(offer),
+        (current) => {
+          const next = run.reroll(current);
+          if (!next) {
+            this.toast(t('ui.notEnoughGold'));
+            return;
+          }
+          this.showChoice(next);
+        },
+      ),
+    );
   }
 
   private pickCard(offer: Offer): void {

@@ -100,6 +100,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '📌',
     rarity: 'rare',
     maxLevel: 3,
+    unavailableFor: ['achilles', 'thanatos'],
     name: L('관통', 'Piercing', '貫通', '贯穿'),
     desc: L(
       '공격이 적을 추가로 {0}명 관통한다.',
@@ -119,6 +120,7 @@ export const WEAPON_UPGRADES: CardDef[] = [
     icon: '🧭',
     rarity: 'rare',
     maxLevel: 2,
+    unavailableFor: ['achilles', 'thanatos'],
     name: L('추적 공격', 'Seeking', '誘導', '追踪'),
     desc: L(
       '공격이 가까운 적을 따라 휘어진다. 추적 성능 {0}%.',

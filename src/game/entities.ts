@@ -117,6 +117,8 @@ export interface Projectile {
   /** orbiting scythes are bound to the player instead of flying */
   orbitAngle: number;
   orbitRadius: number;
+  /** Visual ballistic height. Boulder shots rise and land like mortar shells. */
+  altitude?: number;
 }
 
 export type PickupKind = 'xp' | 'gold' | 'heal';
