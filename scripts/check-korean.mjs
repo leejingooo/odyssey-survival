@@ -30,10 +30,30 @@ for (const expected of [
   '회심의 일격',
   '응징의 방패',
   '피바람',
-  '전장의 권능',
-  '겨울의 의식',
+  '벌어진 상처',
+  '팔랑크스',
+  '빠른 기도',
+  '단층 파열',
+  '삼지창 숙련',
+  '검은 일식',
+  '태양 창',
+  '깨진 맹세',
+  '청동 군단',
+  '폭풍의 시계',
+  '두 번째 불씨',
+  '넘치는 잔',
+  '신성 동맹',
+  '보름달의 파문',
+  '해빙 폭발',
 ]) {
   if (!codex.includes(expected)) throw new Error(`docs/CODEX.md가 게임 데이터와 다름: ${expected}`);
+}
+
+const aspects = readFileSync('src/data/aspects.ts', 'utf8');
+const aspectIds = aspects.match(/id: '[a-z]+_aspect_[a-z_]+'/g) ?? [];
+if (aspectIds.length !== 45) throw new Error(`확장 축복은 정확히 45종이어야 함: ${aspectIds.length}종 발견`);
+for (const genericPath of ['_aspect_might', '_aspect_refuge', '_aspect_rite']) {
+  if (aspects.includes(genericPath)) throw new Error(`일률적인 확장 축복이 다시 추가됨: ${genericPath}`);
 }
 
 console.log('Korean terminology and generated codex checks passed');
