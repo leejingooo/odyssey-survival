@@ -72,7 +72,7 @@ export interface RunEvents {
 
 // Past this the screen stops reading as a crowd and starts reading as a wall,
 // which is unfair rather than hard.
-const MAX_ENEMIES = 330;
+const MAX_ENEMIES = 520;
 /** How long the hero must hold still before Hestia's hearth catches. */
 const HEARTH_DELAY = 0.8;
 /** Seconds out of combat before Hestia's warmth starts closing wounds. */
@@ -97,6 +97,8 @@ export class Run {
   xpNext: number;
   gold = 0;
   kills = 0;
+  rerollTokens = 0;
+  rerollsBought = 0;
   revivesLeft: number;
 
   owned = new Map<string, number>();
@@ -124,6 +126,7 @@ export class Run {
   private nextBossIndex = 0;
   private nextMilestone = 5;
   private damageTextCd = 0;
+  private rerollGiftGranted = false;
 
   private readonly input: DragInput;
   private readonly renderer: Renderer;
@@ -587,6 +590,7 @@ export class Run {
         infusion: p.currentInfusion,
         orbitAngle: 0,
         orbitRadius: 0,
+        altitude: kind === 'boulder' ? 1 : undefined,
       });
     }
   }
@@ -1565,6 +1569,17 @@ export class Run {
       proj.y += proj.vy * dt;
       proj.angle += proj.spin * dt;
 
+      // Sisyphus' stone is a lobbed shell: it passes over bodies and only
+      // deals damage when its flight timer reaches the impact point.
+      if (proj.kind === 'boulder') {
+        const totalLife =
+          (this.hero.weaponBase.range * this.stats.rangeMult) /
+          (this.hero.weaponBase.speed * this.stats.projectileSpeedMult);
+        const progress = clamp(1 - proj.life / totalLife, 0, 1);
+        proj.altitude = Math.sin(progress * Math.PI) * 58;
+        continue;
+      }
+
       if (proj.hostile) {
         if (dist2(proj.x, proj.y, p.x, p.y) <= (proj.radius + 13) ** 2) {
           this.hurtPlayer(proj.damage, proj.x, proj.y);
@@ -1587,7 +1602,6 @@ export class Run {
           fromY: proj.y,
           infusion: proj.infusion,
         });
-        if (proj.kind === 'boulder' && proj.splashRadius > 0) this.explodeBoulder(proj, false);
         if (proj.pierceLeft <= 0) {
           proj.life = 0;
           break;
@@ -1618,7 +1632,29 @@ export class Run {
         color: GODS.gaia.accent,
       });
     }
-    this.areaDamage(proj.x, proj.y, proj.splashRadius, proj.damage * proj.splashDamage, false);
+    const near = this.grid.query(proj.x, proj.y, proj.splashRadius, this.scratch);
+    for (const enemy of near) {
+      if (enemy.dead) continue;
+      const distance = Math.hypot(enemy.x - proj.x, enemy.y - proj.y);
+      if (distance > proj.splashRadius + enemy.radius) continue;
+      // Brutal at ground zero, rapidly falling to a glancing edge hit.
+      const normalized = clamp(distance / proj.splashRadius, 0, 1);
+      const falloff = 0.25 + 1.55 * (1 - normalized) ** 2;
+      this.hitEnemy(enemy, proj.damage * proj.splashDamage * falloff, {
+        onHit: true,
+        empowered: proj.empowered,
+        fromX: proj.x,
+        fromY: proj.y,
+        infusion: proj.infusion,
+      });
+    }
+    for (const chest of this.chests) {
+      const distance = Math.hypot(chest.x - proj.x, chest.y - proj.y);
+      if (distance <= proj.splashRadius + chest.radius) {
+        const falloff = 0.25 + 1.55 * (1 - clamp(distance / proj.splashRadius, 0, 1)) ** 2;
+        this.damageChest(chest, proj.damage * proj.splashDamage * falloff);
+      }
+    }
   }
 
   private steerProjectile(proj: Projectile, dt: number): void {
@@ -1726,6 +1762,7 @@ export class Run {
 
     const offers = drawOffers({
       rng: this.rng,
+      hero: this.hero,
       pool: CHEST_POOL,
       owned: this.owned,
       luck: this.stats.luck,
@@ -1810,6 +1847,13 @@ export class Run {
     while (this.xp >= this.xpNext) {
       this.xp -= this.xpNext;
       this.level++;
+      // Every voyage grants one tactical redraw in the midgame. It cannot be
+      // hoarded between runs, while gold remains a fallback before/after it.
+      if (!this.rerollGiftGranted && this.level >= 10) {
+        this.rerollGiftGranted = true;
+        this.rerollTokens++;
+        this.events.onNarrative(t('card.rerollGift'));
+      }
       this.xpNext = xpForLevel(this.level);
       audio.play('levelup');
       this.renderer.flash('#ffe9b0', 0.2);
@@ -1818,6 +1862,7 @@ export class Run {
       this.events.onLevelUp(this.level);
       const offers = drawOffers({
         rng: this.rng,
+        hero: this.hero,
         pool: LEVEL_POOL,
         owned: this.owned,
         luck: this.stats.luck,
@@ -1940,6 +1985,30 @@ export class Run {
     // Health perks should feel like an immediate heal, not a bigger empty bar.
     if (card.id === 'perk_wine') this.healPlayer(24);
     this.presentNextChoice();
+  }
+
+  get rerollCost(): number {
+    return 30 + this.rerollsBought * 20;
+  }
+
+  /** Replace all three visible offers, spending the free token before run gold. */
+  reroll(choice: PendingChoice): PendingChoice | null {
+    if (this.rerollTokens > 0) this.rerollTokens--;
+    else {
+      if (this.gold < this.rerollCost) return null;
+      this.gold -= this.rerollCost;
+      this.rerollsBought++;
+    }
+    const offers = drawOffers({
+      rng: this.rng,
+      hero: this.hero,
+      pool: choice.source === 'chest' ? CHEST_POOL : LEVEL_POOL,
+      owned: this.owned,
+      luck: this.stats.luck,
+      maxGods: this.maxGods,
+      availableGods: this.availableGods,
+    });
+    return { ...choice, offers };
   }
 
   /** Temporary perks wear off after a set number of level-ups. */

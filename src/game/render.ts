@@ -376,21 +376,27 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy): void {
       drawShade(ctx, e);
       break;
     case 'harpy':
+    case 'satyr':
       drawHarpy(ctx, e, frozen);
       break;
     case 'spartoi':
+    case 'hoplite':
       drawSpartoi(ctx, e);
       break;
     case 'siren':
+    case 'gorgon':
       drawSiren(ctx, e, frozen);
       break;
     case 'cyclops':
+    case 'chimera':
       drawCyclops(ctx, e);
       break;
     case 'minotaur':
+    case 'talos':
       drawMinotaur(ctx, e);
       break;
     case 'cerberus':
+    case 'hydra':
       drawCerberus(ctx, e);
       break;
   }
@@ -788,7 +794,16 @@ function drawPuddle(ctx: CanvasRenderingContext2D, puddle: Puddle): void {
 
 function drawProjectile(ctx: CanvasRenderingContext2D, proj: Projectile): void {
   ctx.save();
-  ctx.translate(proj.x, proj.y);
+  if (proj.kind === 'boulder' && (proj.altitude ?? 0) > 0) {
+    const altitude = proj.altitude ?? 0;
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = '#05040a';
+    ctx.beginPath();
+    ctx.ellipse(proj.x, proj.y, proj.radius * (1 + altitude / 120), proj.radius * 0.55, 0, 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.translate(proj.x, proj.y - (proj.altitude ?? 0));
   ctx.rotate(proj.angle);
 
   switch (proj.kind) {
@@ -889,10 +904,13 @@ function drawVfx(ctx: CanvasRenderingContext2D, fx: Vfx): void {
   ctx.save();
   switch (fx.kind) {
     case 'sweep': {
-      ctx.globalAlpha = fade * 0.75;
+      // A solid, restrained blade trail stays readable without repeatedly
+      // washing the screen white at Achilles' attack cadence.
+      ctx.globalAlpha = fade * 0.34;
       const grad = ctx.createRadialGradient(fx.x, fx.y, fx.radius * 0.25, fx.x, fx.y, fx.radius);
       grad.addColorStop(0, 'rgba(255,255,255,0)');
-      grad.addColorStop(1, fx.color);
+      grad.addColorStop(0.72, fx.color);
+      grad.addColorStop(1, 'rgba(217,83,79,0)');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.moveTo(fx.x, fx.y);

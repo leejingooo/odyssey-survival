@@ -69,7 +69,8 @@ export const ko = {
 
   'hero.sisyphus.name': '시지프스',
   'hero.sisyphus.role': '투석 전사',
-  'hero.sisyphus.desc': '바위를 굴려 던진다. 느리지만 꿰뚫고, 떨어진 자리가 통째로 터진다.',
+  'hero.sisyphus.desc':
+    '바위를 포탄처럼 높이 던진다. 착탄 중심은 치명적이며, 바깥으로 갈수록 폭발 피해가 약해진다.',
   'hero.sisyphus.weapon': '영원의 바위',
 
   'hero.thanatos.name': '타나토스',
@@ -123,6 +124,9 @@ export const ko = {
   'card.newLevel': '새로 획득',
   'card.upgradeTo': '{0}단계로 강화',
   'card.reroll': '다시 뽑기',
+  'card.rerollFree': '🎲 다시 뽑기 · 무료 {0}회',
+  'card.rerollGold': '🎲 다시 뽑기 · ◆ {0}',
+  'card.rerollGift': '🎲 운명의 실타래를 얻었다! 카드 선택을 한 번 무료로 다시 뽑을 수 있다.',
   'card.swap': '교체',
   'card.swapDesc': '{0}의 축복을 전부 놓고 이 신을 모신다',
   'card.temporary': '{0}레벨 동안',
@@ -137,6 +141,22 @@ export const ko = {
   'effect.auto.help': '알아서 주기적으로 발동한다',
   'effect.passive.help': '항상 적용된다',
   'effect.trigger.help': '처치하거나 맞았을 때 터진다',
+  'heroHint.odysseus.attack': '화살에 실려 적중한 대상에게 적용된다.',
+  'heroHint.odysseus.auto': '활과 별개로 자동 발동한다.',
+  'heroHint.odysseus.passive': '궁수의 능력치를 항상 강화한다.',
+  'heroHint.odysseus.trigger': '화살 적중 또는 처치 조건으로 발동한다.',
+  'heroHint.achilles.attack': '검의 부채꼴 안에 있는 모든 적에게 적용된다.',
+  'heroHint.achilles.auto': '검격과 별개로 자동 발동한다.',
+  'heroHint.achilles.passive': '근접 전투 중 항상 적용된다.',
+  'heroHint.achilles.trigger': '검격 적중 또는 근접 처치 조건으로 발동한다.',
+  'heroHint.sisyphus.attack': '바위가 착탄해 폭발할 때 범위 안의 적에게 적용된다.',
+  'heroHint.sisyphus.auto': '바위 투척과 별개로 자동 발동한다.',
+  'heroHint.sisyphus.passive': '포탄의 피해와 생존 능력에 항상 적용된다.',
+  'heroHint.sisyphus.trigger': '착탄 또는 폭발 처치 조건으로 발동한다.',
+  'heroHint.thanatos.attack': '죽음의 장막 파동에 닿은 모든 적에게 적용된다.',
+  'heroHint.thanatos.auto': '장막 파동과 별개로 자동 발동한다.',
+  'heroHint.thanatos.passive': '장막 안에서 항상 적용된다.',
+  'heroHint.thanatos.trigger': '장막 적중 또는 수확 처치 조건으로 발동한다.',
 
   // ---------- god slots ----------
   'slots.title': '신탁의 그릇',
@@ -225,7 +245,13 @@ export const ko = {
   'enemy.siren': '세이렌',
   'enemy.minotaur': '미노타우로스',
   'enemy.cerberus': '케르베로스',
-  'enemy.boss': '{0} 등장',
+  'enemy.satyr': '사티로스',
+  'enemy.gorgon': '고르곤',
+  'enemy.hoplite': '호플리테스',
+  'enemy.chimera': '키마이라',
+  'enemy.hydra': '히드라',
+  'enemy.talos': '탈로스',
+  'enemy.boss': '{0}이(가) 나타났다',
 
   // ---------- narrative ----------
   'story.intro':

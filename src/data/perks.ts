@@ -143,10 +143,10 @@ export const PERKS: CardDef[] = [
     maxLevel: 5,
     name: L('청동 갑주', 'Bronze Panoply', '青銅の甲冑', '青铜战甲'),
     desc: L(
-      '맞을 때마다 피해를 {0}씩 깎아낸다.',
-      'Every hit you take lands {0} lighter.',
-      '受けるダメージを毎回{0}減らす。',
-      '每次受到的伤害都减少 {0} 点。',
+      '방어력 +1. 강화 후 받는 피해가 공격마다 총 {0} 감소한다.',
+      'Armour +1. After upgrading, every incoming hit is reduced by {0} in total.',
+      '防御力+1。強化後、受けるダメージを一撃ごとに合計{0}軽減する。',
+      '护甲 +1。强化后，每次受到的伤害总计减少 {0} 点。',
     ),
     values: (lv) => [lv],
     apply: (o, lv) => {
@@ -198,7 +198,7 @@ export const PERKS: CardDef[] = [
     temporaryLevels: 3,
     name: L('암브로시아', 'Ambrosia', 'アンブロシア', '神馔'),
     desc: L(
-      '초당 체력 {0}씩 아문다. 신들의 음식은 오래가지 않는다 — 3번 레벨이 오르면 사라진다.',
+      '초당 체력을 {0} 회복한다. 신들의 음식은 오래가지 않아, 레벨을 3회 올리면 사라진다.',
       'Regenerate {0} health a second. Food of the gods does not keep: it fades after 3 level-ups.',
       '毎秒{0}ずつ癒える。神々の食べ物は長くもたない——3回レベルが上がれば消える。',
       '每秒回复 {0} 点生命。神明的食物存不住——升 3 级后消失。',
@@ -218,7 +218,7 @@ export const PERKS: CardDef[] = [
     temporaryLevels: 3,
     name: L('흡혈의 잔', 'Chalice of Blood', '吸血の杯', '嗜血之杯'),
     desc: L(
-      '적을 쓰러뜨릴 때마다 체력 {0}을 마신다. 잔은 3번 레벨이 오르면 비워진다.',
+      '적을 쓰러뜨릴 때마다 체력을 {0} 회복한다. 레벨을 3회 올리면 잔이 비워진다.',
       'Every kill is worth {0} health. The cup runs dry after 3 level-ups.',
       '敵を倒すたび体力{0}を飲む。杯は3回レベルが上がれば空になる。',
       '每次击杀畅饮 {0} 点生命。升 3 级后杯中见底。',
