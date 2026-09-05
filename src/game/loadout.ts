@@ -59,8 +59,9 @@ export function ownedGods(owned: ReadonlyMap<string, number>): Set<GodId> {
 
 /**
  * Rebuild the entire loadout from scratch: hero base -> permanent upgrades -> every owned
- * card at its current level. Cards are therefore idempotent and re-orderable,
- * which is what makes `apply` safe to write as "the full effect at level N".
+ * card at its current level. Cards are applied in the pool's canonical order
+ * rather than acquisition order, so signature boons always establish their
+ * mechanics before aspects compose bonuses onto them.
  */
 export function buildLoadout(
   hero: HeroDef,
@@ -72,9 +73,10 @@ export function buildLoadout(
     mech: { ...baseMechanics(), ...hero.mech },
   };
   applyPermanent(out, save);
-  for (const [id, level] of owned) {
+  for (const [id, card] of ALL_CARDS) {
+    const level = owned.get(id) ?? 0;
     if (level <= 0) continue;
-    ALL_CARDS.get(id)?.apply(out, level);
+    card.apply(out, level);
   }
   // Hera's vows read the finished build, so they are settled last — otherwise
   // the bonus would depend on the order cards happened to be taken in.

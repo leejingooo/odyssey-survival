@@ -907,6 +907,8 @@ export class Run {
     rawDamage: number,
     opts: {
       onHit?: boolean;
+      /** The caller has already expanded this hit into its intended area. */
+      suppressSplash?: boolean;
       empowered?: boolean;
       fromX?: number;
       fromY?: number;
@@ -995,7 +997,7 @@ export class Run {
         this.freezeEnemy(enemy, m.snareDuration, 'vine');
       }
       if (m.knockback > 0) this.knockback(enemy, m.knockback, opts.fromX, opts.fromY);
-      if (m.splashRadius > 0 && m.splashDamage > 0) {
+      if (!opts.suppressSplash && m.splashRadius > 0 && m.splashDamage > 0) {
         this.areaDamage(enemy.x, enemy.y, m.splashRadius, damage * m.splashDamage, false);
       }
       if (m.chainJumps > 0) {
@@ -1642,6 +1644,7 @@ export class Run {
       const falloff = 0.25 + 1.55 * (1 - normalized) ** 2;
       this.hitEnemy(enemy, proj.damage * proj.splashDamage * falloff, {
         onHit: true,
+        suppressSplash: true,
         empowered: proj.empowered,
         fromX: proj.x,
         fromY: proj.y,
