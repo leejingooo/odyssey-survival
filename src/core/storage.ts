@@ -1,4 +1,7 @@
-import { detectLocale, type LocaleId } from '../i18n';
+import { detectLocale, LOCALES, type LocaleId } from '../i18n';
+import { HERO_IDS } from '../data/heroes';
+import { GOD_IDS } from '../data/gods';
+import { PERMANENT } from '../data/permanent';
 
 const STORAGE_KEY = 'odyssey-survival/save/v1';
 const SAVE_VERSION = 1;
@@ -55,23 +58,65 @@ function freshSave(): SaveData {
   };
 }
 
-/** Merge a parsed blob over defaults so an older or partial save still loads. */
+function record(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function nonnegative(value: unknown, fallback = 0): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? value
+    : fallback;
+}
+
+function ids(value: unknown, allowed: readonly string[]): string[] {
+  return Array.isArray(value)
+    ? [...new Set(value.filter((id): id is string => typeof id === 'string' && allowed.includes(id)))]
+    : [];
+}
+
+/** Validate persisted values; TypeScript types do not protect parsed JSON. */
 function migrate(raw: unknown): SaveData {
   const base = freshSave();
-  if (!raw || typeof raw !== 'object') return base;
-  const data = raw as Partial<SaveData>;
+  const data = record(raw);
+  const permanent = record(data.permanent);
+  const stats = record(data.stats);
+  const iap = record(data.iap);
+  const ads = record(data.ads);
+  const heroes = ids(data.unlockedHeroes, HERO_IDS);
+  const bool = (value: unknown, fallback: boolean): boolean =>
+    typeof value === 'boolean' ? value : fallback;
   return {
     ...base,
-    ...data,
-    version: SAVE_VERSION,
-    permanent: { ...base.permanent, ...(data.permanent ?? {}) },
-    unlockedHeroes:
-      Array.isArray(data.unlockedHeroes) && data.unlockedHeroes.length > 0
-        ? data.unlockedHeroes
-        : base.unlockedHeroes,
-    stats: { ...base.stats, ...(data.stats ?? {}) },
-    iap: { ...base.iap, ...(data.iap ?? {}) },
-    ads: { ...base.ads, ...(data.ads ?? {}) },
+    gold: nonnegative(data.gold),
+    permanent: Object.fromEntries(PERMANENT
+      .filter((def) => Object.hasOwn(permanent, def.id))
+      .map((def) => [def.id, Math.min(def.maxRank, Math.floor(nonnegative(permanent[def.id])))])),
+    unlockedHeroes: heroes.length ? heroes : base.unlockedHeroes,
+    unlockedGods: ids(data.unlockedGods, GOD_IDS),
+    lastHero: HERO_IDS.includes(data.lastHero as typeof HERO_IDS[number])
+      ? data.lastHero as string : base.lastHero,
+    locale: LOCALES.includes(data.locale as LocaleId) ? data.locale as LocaleId : base.locale,
+    sfx: bool(data.sfx, base.sfx),
+    music: bool(data.music, base.music),
+    haptics: bool(data.haptics, base.haptics),
+    hapticStrength: data.hapticStrength === 'strong' ? 'strong' : 'light',
+    reducedMotion: bool(data.reducedMotion, base.reducedMotion),
+    stats: {
+      runs: Math.floor(nonnegative(stats.runs)),
+      bestTimeSec: nonnegative(stats.bestTimeSec),
+      bestLevel: Math.floor(nonnegative(stats.bestLevel)),
+      totalKills: Math.floor(nonnegative(stats.totalKills)),
+    },
+    iap: {
+      removeAds: bool(iap.removeAds, false),
+      unlockAllHeroes: bool(iap.unlockAllHeroes, false),
+    },
+    ads: {
+      day: typeof ads.day === 'string' ? ads.day : '',
+      watched: Math.floor(nonnegative(ads.watched)),
+    },
   };
 }
 

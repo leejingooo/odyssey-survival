@@ -21,6 +21,8 @@ jobs:
       - run: npm ci
       - name: Typecheck and build
         run: npm run build
+      - name: Save data regression tests
+        run: npm run test:storage
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
       - name: Serve the build
@@ -36,6 +38,10 @@ jobs:
           # frames to reach a treasure chest.
           STEPS: '400'
           OUT: shots
+      - name: UI flow regression tests
+        run: npm run test:flows
+        env:
+          BASE: http://127.0.0.1:4173
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

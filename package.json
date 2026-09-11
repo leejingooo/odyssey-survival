@@ -16,6 +16,7 @@
     "test:soak": "node tests/soak.mjs",
     "format": "prettier --write \"src/**/*.{ts,css}\" \"tests/*.mjs\" \"*.{ts,json,md}\"",
     "test:flows": "node tests/flows.mjs",
+    "test:storage": "node --test tests/storage.mjs",
     "test:korean": "node scripts/check-korean.mjs",
     "codex": "node scripts/build-codex.mjs"
   },

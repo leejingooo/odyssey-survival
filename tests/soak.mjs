@@ -121,7 +121,7 @@ for (const [index, hero] of ['odysseus', 'achilles', 'sisyphus', 'thanatos'].ent
   // broken game (nothing dies, no cards, instant death), not a bad run.
   if (final.time < 60) failures.push(`${hero}: survived only ${final.time}s`);
   if (final.kills < 50) failures.push(`${hero}: only ${final.kills} kills`);
-  if (final.picks < 1) failures.push(`${hero}: never got to take a card`);
+  if (picks < 1) failures.push(`${hero}: never got to take a card`);
   failures.push(...errors);
   await page.close();
 }
